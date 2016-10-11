@@ -19,4 +19,8 @@ A perl script that concatenates multiple alignment files in fasta format into a 
 
 Converts DNA sequence alignments in fasta format to STRUCTURE input files that summarises bases at variable sites.
 
+### structureShell.pl
+
+Runs STRUCTURE one time for each value of K in a specified range (e.g. from 1 to 10).
+
 
