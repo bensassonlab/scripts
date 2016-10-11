@@ -14,3 +14,9 @@ A perl script implementing the four-gamete test for recombination described in H
 ### alcat.pl
 
 A perl script that concatenates multiple alignment files in fasta format into a single large alignment file
+
+### structureInfile.pl
+
+Converts DNA sequence alignments in fasta format to STRUCTURE input files that summarises bases at variable sites.
+
+
