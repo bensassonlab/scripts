@@ -135,7 +135,7 @@ if (exists $parameters{"e"}) {
 
 # PRINT OUT FASTA FILE OF SEGREGATING SITES IF REQUESTED
 #
-if (exists $parameters{"s"}) {
+#if (exists $parameters{"s"}) {
 	open OUT, "> $segfile" or die "couldn't open $segfile : $!";
 	foreach my $name (@names) {
 		print OUT ">$name\n";
@@ -144,7 +144,7 @@ if (exists $parameters{"s"}) {
 	}
 	close OUT;
 	print "\nPrinted a fasta file of segregating sites to $segfile.\n";
-}
+#}
 
 
 # IDENTIFY SITES WITH ALL 4 GAMETES
