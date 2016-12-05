@@ -13,7 +13,7 @@ my ($infile,@names);
 my $outfile = "faChoose.fasta";
 my $seq_recog = "a-z0-9";				# recognises quality scores
 
-getopts('i:n:o:',\%parameters);
+getopts('i:n:o:e',\%parameters);
 
 if (exists $parameters{"i"}) { $infile = $parameters{"i"}; }
 if (exists $parameters{"n"}) { @names = split(/\s+/, $parameters{"n"}); }
@@ -25,7 +25,8 @@ unless ((exists $parameters{"i"}) && ($parameters{"n"})) {
 
 	print   "    -i\tfasta format infile\n";
 	print   "    -n\tchosen name(s) of sequences e.g. 'S288c RM11'\n";
-	print   "    -o\tname of outfile [$outfile]\n\n";
+	print   "    -o\tname of outfile [$outfile]\n";
+	print   "    -e\tallow exact matches only\n\n";
 	exit;
 }
 
@@ -37,7 +38,8 @@ open OUT, ">$outfile" or die "couldn't open $outfile : $!";
 my @printed;
 foreach my $fn (@namesinfile) {
 	foreach my $un (@names) {	# print if name in the original file matches one of the names defined by the user
-		if ($fn =~ /$un/mi) { print OUT ">$fn\n$seq{$fn}\n"; push (@printed,$fn); }
+		if ((exists $parameters{'e'}) && ($fn eq '$un')) { print OUT ">$fn\n$seq{$fn}\n"; push (@printed,$fn); }
+		elsif ($fn =~ /$un/mi) { print OUT ">$fn\n$seq{$fn}\n"; push (@printed,$fn); }
 	}
 }
 
