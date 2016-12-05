@@ -38,7 +38,7 @@ open OUT, ">$outfile" or die "couldn't open $outfile : $!";
 my @printed;
 foreach my $fn (@namesinfile) {
 	foreach my $un (@names) {	# print if name in the original file matches one of the names defined by the user
-		if ((exists $parameters{'e'}) && ($fn eq '$un')) { print OUT ">$fn\n$seq{$fn}\n"; push (@printed,$fn); }
+		if ((exists $parameters{'e'}) && ($fn eq "$un")) { print OUT ">$fn\n$seq{$fn}\n"; push (@printed,$fn); }
 		elsif ((!defined $parameters{'e'}) && ($fn =~ /$un/mi)) { print OUT ">$fn\n$seq{$fn}\n"; push (@printed,$fn); }
 	}
 }
