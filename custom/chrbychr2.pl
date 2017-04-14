@@ -90,7 +90,7 @@ my $allpopnsref = strainSummary($locus, \%strain,\%longestPopn,\%longSubPop,\%al
 open OUT, ">$outfile" or die "couldn't open $outfile : $!";
 print OUT "Strain\tHabitat\tUsedAsRef\t";
 foreach my $chr (@loci) { print OUT "chr$chr\t"; };
-print OUT "chrbychr70\tchrbychr70details\n";
+print OUT "chrbychr$bsmin\tchrbychr$bsmin"."details\n";
 
 foreach my $strain (sort values %strain) {
 	print OUT "$strain\t$habitat{$strain}\t";
@@ -142,7 +142,7 @@ head(data)
 
 
 # Fisher's exact test on populations (USA, European etc) vs admixed/non-admixed
-h<-chrbychr70
+h<-chrbychr$bsmin
 levels(h)
 levels(h)[levels(h)!=\"admixed\"]<-\"nonadmixed\"
 t<-table(Habitat,h)
