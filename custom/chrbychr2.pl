@@ -16,13 +16,20 @@ my $habitatFile = "habitatSimple.txt";
 				# write code to handle subpopulations properly: 
 				# 	- European or USA when subpopulations not defined
 my %popns = (
-	"YJM978m" => "WINE",
+	"L1374m" => "WINE",
+	"DBVPG1106m" => "WINE",
 	"NCYC110m" => "WA",
+	"DBVPG6044m" => "WA",
 	"YPS606m" => "PAO",
+	"YPS128m" => "PAO",
+	"K11m" => "sake",
 	"Y9m" => "sake",
 	"UWOPS05_2173m" => "MAL",
+	"UWOPS03_4614m" => "MAL",
 	"SDO1s1" => "NCO",
+	"SDO3s1" => "NCO",
 	"ZP560s1" => "EUO",
+	"ZP562s1" => "EUO",
 );
 my %subpopns = (
 	"WINE" => "European",
@@ -46,7 +53,7 @@ while (<HABITAT>) {
 
 open RESULTS, "<$infile" or die "couldn't open $infile : $!";
 
-my ($locus, %strain, $prevCluster, $prevBs, %longestPopn,%longSubPop, %allpopns, @loci);
+my ($locus, %strain, $prevCluster, $prevBs, %longestPopn,%longSubPop, %allpopns, @loci, %bs4longestPopn);
 while (<RESULTS>) {
 	if (/prop\.part\(cen(\d+)bs\$trees\)/) { 
 		if (%strain) {						# if this is not the first locus
@@ -137,7 +144,7 @@ head(data)
 # Fisher's exact test on populations (USA, European etc) vs admixed/non-admixed
 h<-chrbychr70
 levels(h)
-levels(h)<-c('admixed', rep('nonadmixed',7))
+levels(h)[levels(h)!=\"admixed\"]<-\"nonadmixed\"
 t<-table(Habitat,h)
 t
 fisher.test(t)
