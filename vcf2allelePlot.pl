@@ -107,7 +107,7 @@ Mode <- function(x) {
 
 ";
 								# add an extra plot for heterozygosity if requested
-if (defined $parameters{"h"}) { print RCMD "par(mfrow=c(3,1),cex=0.5)\npar(xpd=TRUE)\n";  } 
+if (defined $parameters{"h"}) { print RCMD "par(mfrow=c(3,1),cex=0.5)\n";  } 
 else { print RCMD "par(mfrow=c(2,1),cex=0.5)\n"; }
 
 foreach my $chr (sort keys %chr) {
@@ -142,7 +142,7 @@ for(i in 1:length(W)) { modepALTindel[i] <- Mode(pALT[pos>(W[i]-($mwsize/2))&pos
 
 				# MAKE SEPARATE STACKED PLOTS FOR SNPs AND INDELS
 				# SNPs
-plot(c(0,max(W)),c(0,1),main=\"$infile: $chr freq of alternate alleles\",sub=\"SNPs Q$qual+\",xlab=\"position\",xaxt=\"n\",ylim=c(0,1),xlim=c(1,max(pos[chr==\"$chr\"])),type = \"n\")
+plot(c(0,max(W)),c(0,1),main=\"$infile: $chr freq of alternate alleles\",sub=\"SNPs Q$qual+\",xlab=\"position\",xaxt=\"n\",ylab=\"allele ratio\",ylim=c(0,1),xlim=c(1,max(pos[chr==\"$chr\"])),type = \"n\")
 points(pos[chr==\"$chr\"&QUAL>=$qual&type==\"snp\"],pALT[chr==\"$chr\"&QUAL>=40&type==\"snp\"],pch=20,col=\"black\")
 axis(1, xaxp=c(0, signif(max(pos[chr==\"$chr\"]),3), 20))
 abline(h=0.5)
@@ -154,15 +154,20 @@ abline(h=mean(pALT[chr==\"$chr\"&QUAL>=$qual&type==\"snp\"]),col=\"orange\")
 	
 	if (defined $parameters{'h'}) { 			# make a new plot of H if requested
 								# legend format for 3 plots per page
+		print RCMD "par(xpd=T)\n";	# do print legend outside the plot	
 		print RCMD "legend(0,-0.16,c(round(mean(pALT[chr==\"$chr\"&QUAL>=$qual&type==\"snp\"]),3),0.5),lty=c(1,1),col=c(\"orange\",\"black\"),title=\"mean\",bty=\"n\")\n";
+		print RCMD "par(xpd=F)\n";	# don't print annotations outside the plot
+
 		showH($chr,"snp");
 		annotate($chr); 				# show annotations on H plot if requested 
-	}	
-	else { print RCMD "legend(0,0.15,c(round(mean(pALT[chr==\"$chr\"&QUAL>=$qual&type==\"snp\"]),3),0.5),lty=c(1,1),col=c(\"orange\",\"black\"),title=\"mean\",bty=\"n\")\n"; }				# legend format for 2 plots per page		
+	}			
+	else { 							# legend format for 2 plots per page
+		print RCMD "legend(0,0.15,c(round(mean(pALT[chr==\"$chr\"&QUAL>=$qual&type==\"snp\"]),3),0.5),lty=c(1,1),col=c(\"orange\",\"black\"),title=\"mean\",bty=\"n\")\n"; 
+	}					
 	
 	print RCMD "
 				# INDELs
-plot(c(0,max(W)),c(0,1),main=\"$infile: $chr freq of alternate alleles\",sub=\"Indels Q$qual+\",xlab=\"position\",xaxt=\"n\",ylim=c(0,1),xlim=c(1,max(pos[chr==\"$chr\"])),type = \"n\")	
+plot(c(0,max(W)),c(0,1),main=\"$infile: $chr freq of alternate alleles\",sub=\"Indels Q$qual+\",xlab=\"position\",ylab=\"allele ratio\",xaxt=\"n\",ylim=c(0,1),xlim=c(1,max(pos[chr==\"$chr\"])),type = \"n\")	
 points(pos[chr==\"$chr\"&QUAL>=$qual&type==\"indel\"],pALT[chr==\"$chr\"&QUAL>=40&type==\"indel\"],pch=20,col=\"black\")	
 axis(1, xaxp=c(0, signif(max(pos[chr==\"$chr\"]),3), 20))
 abline(h=0.5)
@@ -193,7 +198,6 @@ sub annotate {
 						# annotate the plot with slightly transparent colored rectangles
 	my $chr = shift;
 
-	print RCMD "par(xpd=F)\n";	# don't print annotations outside the plot	
 	for (my $i=0; $i<@{$astart{$chr}}; $i++) {
 		my $j;				# use a number from 1 to n for type color	
 		for ($j=0; $j<@types; $j++) { if ($atype{$chr}[$i] eq $types[$j]) { $j += 1; last; } }	
@@ -204,19 +208,19 @@ sub annotate {
 	print RCMD "par(xpd=T)\n";	# do print legend outside the plot	
 
 
-	for (my $j=1; $j<=@types; $j++) {	
-		print RCMD "legend(W[60],-0.16,legend=\"$types[$j-1]\",col=rainbow(".@types.",alpha=0.3)[$j],bty=\"n\")\n";
+	for (my $j=1; $j<=@types; $j++) {
+		print RCMD "legend(W[100],-0.15-($j/20),lty=1,legend=\"$types[$j-1]\",col=rainbow(".@types.",alpha=0.3)[$j],bty=\"n\")\n";	
 	}
-
+	print RCMD "par(xpd=F)\n";	# don't print annotations outside the plot
 }	
 
 sub showmode {
 	my $chr = shift;
 	my $type = shift;
-
+	print RCMD "par(xpd=T)\n";	# do print legend outside the plot	
 	print RCMD "lines(W,modepALT$type,col=\"green\")\n";
 	print RCMD "legend(W[60],-0.16,Mode(pALT[chr==\"$chr\"&QUAL>=$qual&type==\"$type\"]),lty=1,col=\"green\",title=\"mode\",bty=\"n\")\n";
-
+	print RCMD "par(xpd=F)\n";	# don't print annotations outside the plot	
 }
 
 sub showH {
@@ -225,14 +229,16 @@ sub showH {
 
 	print RCMD "
 my<-max((het_$type+diff_$type+err_$type)/$mwsize)
-plot(c(0,max(W)),c(0,max((het_$type+diff_$type+err_$type)/$mwsize)),type='n',xlab=\"position\",main=\"$infile: $chr sliding window ($mwsize) of heterozygosity, homozygous diffs and error\",sub=\"$type Q$qual+\",xaxt=\"n\")
+plot(c(0,max(W)),c(0,max((het_$type+diff_$type+err_$type)/$mwsize)),type='n',ylab=\"No.sites per $mwsize\",xlab=\"position\",main=\"$infile: $chr sliding window ($mwsize) of heterozygosity, homozygous diffs and error\",sub=\"$type Q$qual+\",xaxt=\"n\")
 axis(1, xaxp=c(0, signif(max(pos[chr==\"$chr\"]),3), 20))
 \n";
 	print RCMD "lines(W,diff_$type/$mwsize,col=\"blue\")\n";
 	print RCMD "lines(W,het_$type/$mwsize,col=\"red\")\n";
 	print RCMD "lines(W,err_$type/$mwsize,col=\"grey\")\n";
 
+	print RCMD "par(xpd=T)\n";	# do print legend outside the plot	
 	print RCMD "legend(W[60],my,c(\"diff_$type\",\"het_$type\",\"err_$type\"),lty=c(1,1,1),col=c(\"blue\",\"red\",\"grey\"),bty=\"n\")\n";
+	print RCMD "par(xpd=F)\n";	# don't print annotations outside the plot	
 
 }				
 
