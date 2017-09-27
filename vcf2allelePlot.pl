@@ -190,7 +190,8 @@ close RCMD;
 
 print "Running $RcmdFile commands in R ..\n";
 `R CMD BATCH $RcmdFile`;
-`mv vcf2allelePlot.Rcmds.Rout $outprefix.Rout`;
+`mv vcf2allelePlot.Rcmds.Rout $outprefix.Rout`;		# save R input and output for future reference
+`mv vcf2allelePlot.Rcmds $outprefix.Rcmds`;		# save R input and output for future reference
 print "Done. R output is in $RcmdFile".".Rout and plots are in Rplots.pdf\n\n";
 
 
