@@ -7,7 +7,7 @@ use Getopt::Std;
 my $program = 'vcf2allelePlot.pl';					#name of script
 
 my %parameters;							#input parameters
-my ($infile,$outfile,$gffile);
+my ($infile,$outfile,$gffile,$outprefix);
 my $qual = 40;
 my $RcmdFile = "vcf2allelePlot.Rcmds";
 my $mwsize = 5000;
@@ -19,8 +19,8 @@ if (exists $parameters{"q"}) { $qual = $parameters{"q"}; }
 if (exists $parameters{"g"}) { $gffile = $parameters{"g"}; }
 if (exists $parameters{"o"}) { $outfile = $parameters{"o"}; }
 elsif (defined $infile) { 
-	if ($infile =~ /^(.+)\.\S+?$/m) { $outfile = "$1.calls"; }
-	else { $outfile = "$infile.calls"; }
+	if ($infile =~ /^(.+)\.\S+?$/m) { $outfile = "$1.calls"; $outprefix = $1; }
+	else { $outfile = "$infile.calls"; $outprefix = $1; }
 } 
 
 unless (exists $parameters{"i"}) {
@@ -98,6 +98,7 @@ rm(list=ls())
 data<-read.table(\"$outfile\",header=T)
 attach(data)
 head(data)
+pdf(\"$outprefix.pdf\")
 
 				# A function for estimating the mode
 Mode <- function(x) {
@@ -189,6 +190,7 @@ close RCMD;
 
 print "Running $RcmdFile commands in R ..\n";
 `R CMD BATCH $RcmdFile`;
+`mv vcf2allelePlot.Rcmds.Rout $outprefix.Rout`;
 print "Done. R output is in $RcmdFile".".Rout and plots are in Rplots.pdf\n\n";
 
 
