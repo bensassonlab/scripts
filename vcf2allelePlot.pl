@@ -72,22 +72,77 @@ print OUT "chr\tpos\tREF\tALT\tQUAL\tREFfwd\tREFrev\tALTfwd\tALTrev\tpALT\ttype\
 print "\nReading and printing data from $infile to $outfile ..\n";
 
 my %chr;
-	
+my ($H,$sH,$fH);			# estimate heterozygosity ($H) from the number of high quality point subs ($ps) and high quality length ($l)
+my $ps = 0; my $sps = 0; my $fps = 0;	# + short region sH (chr1 200,000..400,000)
+my $l = 0; my $sl = 0; my $fl = 0;	# + annotation-filtered fH genome-wide
+my $H3; my $ps3 = 0; my $l3 =0;		# + short region sH (chr1 900,000..1,100,000)
+
 while (<DATA>) { 
 								# find the lines with data 
 	if (/^(\S+)\s+(\d+)\s+\.\s+(\S+)\s+(\S+)\s+(\S+)\s+\.\s+\S+?DP4=(\d+),(\d+),(\d+),(\d+)/m) {
-		if ($4 eq ".") { next; }			# skip invariant sites
-		my $pAlt = ($8+$9)/($6+$7+$8+$9);
-		print OUT "$1\t$2\t$3\t$4\t$5\t$6\t$7\t$8\t$9\t$pAlt\t";
-		$chr{$1}++;					# a hash storing chromosome names and the number of variant sites for each
+		my $chr = $1;
+		my $pos = $2;
 		my $ref = $3;
 		my $alt = $4;
+		my $q = $5;
+
+
+		my $filter = "no";
+
+		if ($q >= $qual) {	 # keep count of high quality sequence (including invariant sites)
+			$l++; 										# genome-wide
+			if (($chr eq "chr1") && ($pos > 200000) && ($pos <= 400000)) { $sl++; } 	# 200kb on chr1
+			if (($chr eq "chr3") && ($pos > 900000) && ($pos <= 1100000)) { $l3++; } 	# 200kb on chr3
+
+			foreach my $achr (@chr) { 
+				if ($chr eq $achr) { 	
+					for (my $i=0; $i < @{$astart{$chr}}; $i++) {
+						if (($pos > $astart{$chr}[$i]) && ($pos <= $aend{$chr}[$i])) { $filter = "yes"; }		
+					}
+				}
+			}  
+			if ($filter eq "no") { $fl++; }
+		}		
+		if ($alt eq ".") { next; }				# invariant site
+			
+		
+		my $pAlt = ($8+$9)/($6+$7+$8+$9);
+		print OUT "$chr\t$2\t$3\t$4\t$5\t$6\t$7\t$8\t$9\t$pAlt\t";
+		$chr{$chr}++;					# a hash storing chromosome names and the number of variant sites for each
 		my $variant = "snp";				# a non-SNP variant
-		unless (($ref =~/^\S$/m) && ($ref =~ /^\S$/m)) { $variant = "indel"; }
+		unless (($ref =~/^\S$/m) && ($ref =~ /^\S$/m)) { $variant = "indel"; }	
+		if ($alt =~ /[A-Z][A-Z]/mi) { $variant = "indel"; }	 	# indels are missed without this
 		print OUT "$variant\n";
+
+		if (($variant eq "snp") && ($q>=$qual))	{ 
+			$ps++; 										# genome-wide
+			if (($chr eq "chr1") && ($pos > 200000) && ($pos <= 400000)) { $sps++; } 	# 200kb on chr1
+			if (($chr eq "chr3") && ($pos > 900000) && ($pos <= 1100000)) { $ps3++; } 	# 200kb on chr1
+			if ($filter eq "no") { $fps++; }
+		}
+		
 	}
 }
 close OUT;
+
+print "Length of high quality sequence (q>=$qual) :\t$l\n";
+print "Number of high quality point subs (q>=$qual) :\t$ps\n";
+print "Genomewide heterozygosity (\$ps/\$l) :\t".($ps/$l)."\n";
+
+print "\nLength of unannotated sequence (q>=$qual) :\t$fl\n";
+print "Number of point subs that are unannotated (q>=$qual) :\t$fps\n";
+print "Unannotated heterozygosity (\$sps/\$sl) :\t".($fps/$fl)."\n";
+
+
+print "\nLength of sequence on chr1 200,000..400,000 (q>=$qual) :\t$sl\n";
+print "Number of point subs on chr1 200,000..400,000 (q>=$qual) :\t$sps\n";
+print "Chr1 200kb heterozygosity (\$sps/\$sl) :\t".($sps/$sl)."\n";
+
+
+print "\nLength of sequence on chr3 900,000..1,100,000 (q>=$qual) :\t$l3\n";
+print "Number of point subs on chr3 900,000..1,100,000 (q>=$qual) :\t$ps3\n";
+print "Chr3 200kb heterozygosity (\$ps3/\$l3) :\t".($ps3/$l3)."\n\n";
+
 
 
 # Print Rcmds to run with R CMD BATCH
@@ -235,7 +290,7 @@ my<-max((het_$type+diff_$type+err_$type)/$mwsize)
 plot(c(0,max(W)),c(0,max((het_$type+diff_$type+err_$type)/$mwsize)),type='n',ylab=\"No.sites per $mwsize\",xlab=\"position\",main=\"$infile: $chr sliding window ($mwsize) of heterozygosity, homozygous diffs and error\",sub=\"$type Q$qual+\",xaxt=\"n\")
 axis(1, xaxp=c(0, signif(max(pos[chr==\"$chr\"]),3), 20))
 \n";
-	print RCMD "lines(W,diff_$type/$mwsize,col=\"blue\")\n";
+	print RCMD "lines(W,diff_$type/$mwsize,col=\"blue\")\n"; # No. of sites per window size (ie does not control for missing data
 	print RCMD "lines(W,het_$type/$mwsize,col=\"red\")\n";
 	print RCMD "lines(W,err_$type/$mwsize,col=\"grey\")\n";
 
