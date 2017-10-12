@@ -11,6 +11,7 @@ my ($infile,$outfile,$gffile,$outprefix);
 my $qual = 40;
 my $RcmdFile = "vcf2allelePlot.Rcmds";
 my $mwsize = 5000;
+my $upperH = 0.8;		# upper limit defining heterozygosity (ie <=80% of base calls): problem:A,C .. better to look at pileup file?
 
 getopts('i:o:q:g:mh',\%parameters);
 
@@ -18,6 +19,7 @@ if (exists $parameters{"i"}) { $infile = $parameters{"i"}; }
 if (exists $parameters{"q"}) { $qual = $parameters{"q"}; }
 if (exists $parameters{"g"}) { $gffile = $parameters{"g"}; }
 if (exists $parameters{"o"}) { $outfile = $parameters{"o"}; }
+if (exists $parameters{"w"}) { $mwsize = $parameters{"w"}; }
 elsif (defined $infile) { 
 	if ($infile =~ /^(.+)\.\S+?$/m) { $outfile = "$1.calls"; $outprefix = $1; }
 	else { $outfile = "$infile.calls"; $outprefix = $1; }
@@ -28,8 +30,9 @@ unless (exists $parameters{"i"}) {
 	print   "    -i\tvcf file from mpileup -u + bcftools call -c\n";
 	print   "    -q\tminimum phred-scaled quality [$qual]\n";
 	print   "    -g\tgff file of annotations [none]\n";
-	print   "    -m\tshow mode in 5kb non-overlapping sliding windows\n";
-	print   "    -h\tshow heterozygosity in 5kb non-overlapping sliding windows\n";
+	print   "    -m\tshow mode in non-overlapping sliding windows\n";
+	print   "    -h\tshow heterozygosity in non-overlapping sliding windows\n";
+	print   "    -w\twindow size [$mwsize bp]\n";
 	print 	"    -o\tprefix for outfiles [prefix of vcf file]\n\n";
 	exit;
 }
@@ -114,7 +117,7 @@ while (<DATA>) {
 		if ($alt =~ /[A-Z][A-Z]/mi) { $variant = "indel"; }	 	# indels are missed without this
 		print OUT "$variant\n";
 
-		if (($variant eq "snp") && ($q>=$qual))	{ 
+		if (($variant eq "snp") && ($q>=$qual) && ($pAlt>=0.2) && ($pAlt<=0.8))	{ 		# point sub with 0.2-0.8 allele ratio?
 			$ps++; 										# genome-wide
 			if (($chr eq "chr1") && ($pos > 200000) && ($pos <= 400000)) { $sps++; } 	# 200kb on chr1
 			if (($chr eq "chr3") && ($pos > 900000) && ($pos <= 1100000)) { $ps3++; } 	# 200kb on chr1
@@ -125,23 +128,23 @@ while (<DATA>) {
 }
 close OUT;
 
-print "Length of high quality sequence (q>=$qual) :\t$l\n";
-print "Number of high quality point subs (q>=$qual) :\t$ps\n";
-print "Genomewide heterozygosity (\$ps/\$l) :\t".($ps/$l)."\n";
+print "$infile\t$l\t# Length of high quality sequence (q>=$qual)\n";
+print "$infile\t$ps\t# Number of high quality point subs (q>=$qual)\n";
+print "$infile\t".($ps/$l)."\t# Genomewide heterozygosity (\$ps/\$l)\n";
 
-print "\nLength of unannotated sequence (q>=$qual) :\t$fl\n";
-print "Number of point subs that are unannotated (q>=$qual) :\t$fps\n";
-print "Unannotated heterozygosity (\$sps/\$sl) :\t".($fps/$fl)."\n";
-
-
-print "\nLength of sequence on chr1 200,000..400,000 (q>=$qual) :\t$sl\n";
-print "Number of point subs on chr1 200,000..400,000 (q>=$qual) :\t$sps\n";
-print "Chr1 200kb heterozygosity (\$sps/\$sl) :\t".($sps/$sl)."\n";
+print "\n$infile\t$fl\t# Length of unannotated sequence (q>=$qual)\n";
+print "$infile\t$fps\t# Number of point subs that are unannotated (q>=$qual)\n";
+print "$infile\t".($fps/$fl)."\t# Unannotated heterozygosity (\$fps/\$fl)\n";
 
 
-print "\nLength of sequence on chr3 900,000..1,100,000 (q>=$qual) :\t$l3\n";
-print "Number of point subs on chr3 900,000..1,100,000 (q>=$qual) :\t$ps3\n";
-print "Chr3 200kb heterozygosity (\$ps3/\$l3) :\t".($ps3/$l3)."\n\n";
+print "\n$infile\t$sl\t# Length of sequence on chr1 200,000..400,000 (q>=$qual)\n";
+print "$infile\t$sps\t# Number of point subs on chr1 200,000..400,000 (q>=$qual)\n";
+print "$infile\t".($sps/$sl)."\t# Chr1 200kb heterozygosity (\$sps/\$sl)\n";
+
+
+print "\n$infile\t$l3\t# Length of sequence on chr3 900,000..1,100,000 (q>=$qual) :\t$l3\n";
+print "$infile\t$ps3\t# Number of point subs on chr3 900,000..1,100,000 (q>=$qual) :\t$ps3\n";
+print "$infile\t".($ps3/$l3)."\t# Chr3 200kb heterozygosity (\$ps3/\$l3) :\t".($ps3/$l3)."\n\n";
 
 
 
