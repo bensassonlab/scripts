@@ -13,17 +13,18 @@ my $RcmdFile = "vcf2allelePlot.Rcmds";
 my $mwsize = 5000;
 my $upperH = 0.8;		# upper limit defining heterozygosity (ie <=80% of base calls): problem:A,C .. better to look at pileup file?
 
-getopts('i:o:q:g:mh',\%parameters);
+getopts('i:o:q:g:w:mh',\%parameters);
 
 if (exists $parameters{"i"}) { $infile = $parameters{"i"}; }
 if (exists $parameters{"q"}) { $qual = $parameters{"q"}; }
 if (exists $parameters{"g"}) { $gffile = $parameters{"g"}; }
 if (exists $parameters{"o"}) { $outfile = $parameters{"o"}; }
-if (exists $parameters{"w"}) { $mwsize = $parameters{"w"}; }
 elsif (defined $infile) { 
 	if ($infile =~ /^(.+)\.\S+?$/m) { $outfile = "$1.calls"; $outprefix = $1; }
 	else { $outfile = "$infile.calls"; $outprefix = $1; }
 } 
+if (exists $parameters{"w"}) { $mwsize = $parameters{"w"}; }
+
 
 unless (exists $parameters{"i"}) {
 	print "\n USAGE: $program -i '<vcf file>'\n\n";
@@ -156,7 +157,7 @@ rm(list=ls())
 data<-read.table(\"$outfile\",header=T)
 attach(data)
 head(data)
-pdf(\"$outprefix.pdf\")
+pdf(\"$outprefix.$mwsize.pdf\")
 
 				# A function for estimating the mode
 Mode <- function(x) {
