@@ -15,7 +15,7 @@ my $upperH = 0.8;		# upper limit defining heterozygosity (ie <=80% of base calls
 my $lwsize = 100000;
 my $gffoutfile = "prefix.gff";
 
-getopts('i:o:q:g:w:mh',\%parameters);
+getopts('i:o:q:g:w:mhI',\%parameters);
 
 if (exists $parameters{"i"}) { $infile = $parameters{"i"}; }
 if (exists $parameters{"q"}) { $qual = $parameters{"q"}; }
@@ -36,6 +36,7 @@ unless (exists $parameters{"i"}) {
 	print   "    -m\tshow mode in non-overlapping sliding windows\n";
 	print   "    -h\tshow heterozygosity in non-overlapping sliding windows\n";
 	print   "    -w\twindow size [$mwsize bp]\n";
+	print   "    -I\tplot indels instead of read depth at point subs\n";
 	print 	"    -o\tprefix for outfiles [prefix of vcf file]\n\n";
 	exit;
 }
@@ -72,6 +73,7 @@ if (defined $gffile) {
 
 # Extract relevant information for the allele plot 
 # and Read in information relevant for the R commands (e.g. which chromosomes are present)
+# and summarize heterozygosity genome-wide, in unannotated regions and 2 other chromosomal loci
 #
 open DATA, "<$infile" or die "couldn't open $infile : $!";
 
@@ -257,8 +259,9 @@ LOHends_$chr
 	else { 							# legend format for 2 plots per page
 		print RCMD "legend(0,0.15,c(round(mean(pALT[chr==\"$chr\"&QUAL>=$qual&type==\"snp\"]),3),0.5),lty=c(1,1),col=c(\"orange\",\"black\"),title=\"mean\",bty=\"n\")\n"; 
 	}					
-	
-	print RCMD "
+
+	if (exists $parameters{"I"}) {		# plot indels instead of read depth at point subs (not useful with the -I command of mpileup)
+		print RCMD "
 				# INDELs
 plot(c(0,max(W)),c(0,1),main=\"$infile: $chr freq of alternate alleles\",sub=\"Indels Q$qual+\",xlab=\"position\",ylab=\"allele ratio\",xaxt=\"n\",ylim=c(0,1),xlim=c(1,max(pos[chr==\"$chr\"])),type = \"n\")	
 points(pos[chr==\"$chr\"&QUAL>=$qual&type==\"indel\"],pALT[chr==\"$chr\"&QUAL>=40&type==\"indel\"],pch=20,col=\"black\")	
@@ -267,6 +270,13 @@ abline(h=0.5)
 abline(h=mean(pALT[chr==\"$chr\"&QUAL>=$qual&type==\"indel\"]),col=\"orange\")
 legend(0,-0.16,c(round(mean(pALT[chr==\"$chr\"&QUAL>=$qual&type==\"indel\"]),3),0.5),lty=c(1,1),col=c(\"orange\",\"black\"),title=\"mean\",bty=\"n\")
 ";
+	}
+	else {					# plot read depth for each point sub
+		print RCMD "
+depth<-REFfwd+REFrev+ALTfwd+ALTrev
+plot(c(0,max(pos[chr==\"$chr\"])),c(0,max(depth[chr==\"$chr\"])),type='n',ylab=\"depth\",xlab=\"position\", main=\"$chr: Depth at positions of point substitutions\")
+";
+	}
 
 	if (defined $parameters{'m'}) { showmode($chr,"indel"); }	# show mode if requested
 	if (defined $parameters{'g'}) { annotate($chr); }		# show annotations on INDEL plot if requested (in progress)
@@ -284,7 +294,7 @@ print "Running $RcmdFile commands in R ..\n";
 `R CMD BATCH $RcmdFile`;
 `mv vcf2allelePlot.Rcmds.Rout $outprefix.Rout`;		# save R input and output for future reference
 `mv vcf2allelePlot.Rcmds $outprefix.Rcmds`;		# save R input and output for future reference
-print "Done. R output is in $RcmdFile".".Rout and plots are in $outprefix.pdf\n\n";
+print "Done. R output is in $outprefix.Rout and plots are in $outprefix.pdf\n\n";
 
 
 # READ IN R OUTPUT TO EXTRACT THE LOH REGIONS TO PRINT IN GFF FORMAT
@@ -295,10 +305,13 @@ my $results;
 print "LOH regions:\n";
 while (<ROUT>) { $results .= $_; }
 #print $results;
-while ($results =~ /LOHstarts_(chr[a-z0-9]+).*?(\s+\d+\s+.*?)LOHends_(chr[a-z0-9]+).*?\s+/imsg) { 
+while ($results =~ /LOHstarts_(chr[a-z0-9]+).*?(\s+\S+\s+.*?)LOHends_(chr[a-z0-9]+).*?\s+/imsg) { 
 	my $chr = $1;
 	my $starts = $2;
-	my $ends = $3;
+
+	if ($starts =~ /numeric\(0\)/) { print "$chr\tNo LOH regions\n"; next; }	# there were no LOH regions
+	unless ($starts =~ /[0-9]/) { next; }						# spurious match in R output
+#	my $ends = $3;
 
 	my (@starts,@ends);
 	while ($starts =~/\s+(\d+)/g) { push (@starts,$1); push (@ends,$1+$lwsize); }
