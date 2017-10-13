@@ -12,6 +12,8 @@ my $qual = 40;
 my $RcmdFile = "vcf2allelePlot.Rcmds";
 my $mwsize = 5000;
 my $upperH = 0.8;		# upper limit defining heterozygosity (ie <=80% of base calls): problem:A,C .. better to look at pileup file?
+my $lwsize = 100000;
+my $gffoutfile = "prefix.gff";
 
 getopts('i:o:q:g:w:mh',\%parameters);
 
@@ -38,6 +40,9 @@ unless (exists $parameters{"i"}) {
 	exit;
 }
 
+open GFFOUT, ">$outprefix.gff" or die "couldn't open $outprefix.gff : $!";
+
+
 # READ THE GFF OF ANNOTATIONS IF THERE IS ONE
 
 my (%atype,%astart,%aend,%seentype);		# chr will be the keys in these hashes of arrays
@@ -47,6 +52,7 @@ if (defined $gffile) {
 	print "\nReading in annotations from $gffile\n";
 	while (<GFF>) {
 		if (/^(\S+)\s+\S+\s+(\S+)\s+(\d+)\s+(\d+)/m) {
+			print GFFOUT $_;
 			$seentype{$2}++;
 			push (@{$atype{$1}},$2);
 			push (@{$astart{$1}},$3);
@@ -137,16 +143,17 @@ print "\n$infile\t$fl\t# Length of unannotated sequence (q>=$qual)\n";
 print "$infile\t$fps\t# Number of point subs that are unannotated (q>=$qual)\n";
 print "$infile\t".($fps/$fl)."\t# Unannotated heterozygosity (\$fps/\$fl)\n";
 
+if ($sl > 0) {
+	print "\n$infile\t$sl\t# Length of sequence on chr1 200,000..400,000 (q>=$qual)\n";
+	print "$infile\t$sps\t# Number of point subs on chr1 200,000..400,000 (q>=$qual)\n";
+	print "$infile\t".($sps/$sl)."\t# Chr1 200kb heterozygosity (\$sps/\$sl)\n";
+}
 
-print "\n$infile\t$sl\t# Length of sequence on chr1 200,000..400,000 (q>=$qual)\n";
-print "$infile\t$sps\t# Number of point subs on chr1 200,000..400,000 (q>=$qual)\n";
-print "$infile\t".($sps/$sl)."\t# Chr1 200kb heterozygosity (\$sps/\$sl)\n";
-
-
-print "\n$infile\t$l3\t# Length of sequence on chr3 900,000..1,100,000 (q>=$qual) :\t$l3\n";
-print "$infile\t$ps3\t# Number of point subs on chr3 900,000..1,100,000 (q>=$qual) :\t$ps3\n";
-print "$infile\t".($ps3/$l3)."\t# Chr3 200kb heterozygosity (\$ps3/\$l3) :\t".($ps3/$l3)."\n\n";
-
+if ($l3 > 0) {
+	print "\n$infile\t$l3\t# Length of sequence on chr3 900,000..1,100,000 (q>=$qual)\n";
+	print "$infile\t$ps3\t# Number of point subs on chr3 900,000..1,100,000 (q>=$qual)\n";
+	print "$infile\t".($ps3/$l3)."\t# Chr3 200kb heterozygosity (\$ps3/\$l3)\n\n";
+}
 
 
 # Print Rcmds to run with R CMD BATCH
@@ -197,6 +204,7 @@ tail(cbind(W,modepALTsnp))
 head(cbind(W,diff_snp/$mwsize))
 head(cbind(W,err_snp/$mwsize))
 
+
 for(i in 1:length(W)) { modepALTindel[i] <- Mode(pALT[pos>(W[i]-($mwsize/2))&pos<=(W[i]+($mwsize/2))&chr==\"$chr\"&QUAL>=$qual&type==\"indel\"]) }
 
 
@@ -207,6 +215,31 @@ points(pos[chr==\"$chr\"&QUAL>=$qual&type==\"snp\"],pALT[chr==\"$chr\"&QUAL>=40&
 axis(1, xaxp=c(0, signif(max(pos[chr==\"$chr\"]),3), 20))
 abline(h=0.5)
 abline(h=mean(pALT[chr==\"$chr\"&QUAL>=$qual&type==\"snp\"]),col=\"orange\")
+
+
+## ESTIMATE LOH regions using LOH window size ($lwsize)
+				# prepare a sliding window vector for estimating LOH regions
+lx<-ceiling(max(pos[chr==\"$chr\"&QUAL>=40])/100000)
+lW<-1:((lx/($lwsize/1000))*100)*$lwsize-($lwsize/2)
+head(lW)
+tail(lW)
+ldiff_snp<-0
+lerr_snp<-0
+lhet_snp<-0
+
+for(i in 1:length(lW)) { 
+	ldiff_snp[i] <- sum(pALT[pos>(lW[i]-($lwsize/2))&pos<=(lW[i]+($mwsize/2))&chr==\"$chr\"&QUAL>=$qual&type==\"snp\"]>0.8) 
+	lerr_snp[i] <- sum(pALT[pos>(lW[i]-($lwsize/2))&pos<=(lW[i]+($mwsize/2))&chr==\"$chr\"&QUAL>=$qual&type==\"snp\"]<0.2) 
+	lhet_snp[i] <- sum(pALT[pos>(lW[i]-($lwsize/2))&pos<=(lW[i]+($mwsize/2))&chr==\"$chr\"&QUAL>=$qual&type==\"snp\"])-lerr_snp[i]-ldiff_snp[i]
+}
+options(scipen=999)
+LOHstarts_$chr<-lW[lhet_snp/$lwsize<0.0005]-($lwsize/2)
+LOHends_$chr<-lW[lhet_snp/$lwsize<0.0005]+($lwsize/2)
+
+LOHstarts_$chr
+LOHends_$chr
+
+
 \n";
 
 	if (defined $parameters{'m'}) { showmode($chr,"snp"); }	# show mode if requested
@@ -253,6 +286,60 @@ print "Running $RcmdFile commands in R ..\n";
 `mv vcf2allelePlot.Rcmds $outprefix.Rcmds`;		# save R input and output for future reference
 print "Done. R output is in $RcmdFile".".Rout and plots are in $outprefix.pdf\n\n";
 
+
+# READ IN R OUTPUT TO EXTRACT THE LOH REGIONS TO PRINT IN GFF FORMAT
+
+open ROUT, "<$outprefix.Rout" or die "couldn't open $outprefix.Rout : $!";
+
+my $results;
+print "LOH regions:\n";
+while (<ROUT>) { $results .= $_; }
+#print $results;
+while ($results =~ /LOHstarts_(chr[a-z0-9]+).*?(\s+\d+\s+.*?)LOHends_(chr[a-z0-9]+).*?\s+/imsg) { 
+	my $chr = $1;
+	my $starts = $2;
+	my $ends = $3;
+
+	my (@starts,@ends);
+	while ($starts =~/\s+(\d+)/g) { push (@starts,$1); push (@ends,$1+$lwsize); }
+
+#	print "chromosome: $chr\nstarts: @starts\nends: @ends\n";
+
+
+
+	my (@jstarts,@jends);
+	my $prevend = -1; my $jstart = "none";			# in progress: need to join into continuos blocks
+	for (my $i=0; $i<@starts; $i++) {
+#		print "$chr\t$starts[$i] .. $ends[$i]\t$jstart\t[$prevend]\n";
+		if ($jstart eq "none") {			# a new LOH block 
+			push (@jstarts, $starts[$i]); 
+			$jstart = $starts[$i]; 
+			$prevend = $ends[$i];
+			next;
+		}
+		if ($prevend == $starts[$i]) { 			# continuing a LOH block
+			$prevend = $ends[$i]; 
+			next; 
+		}
+		else {						# end of a LOH block
+			print "LOHblock: $chr\t$jstart\t$prevend\n";		# problem: 1st entry gets mistaken for a block
+			print GFFOUT "$chr\tvcf2allelePlot.pl\tLOH\t$jstart\t$prevend\t.\t+\t.\tLOHregion. Windowsize=$lwsize; snp heterozygosity < 0.0005\n";		
+
+			push (@jends,$prevend);
+			$jstart = $starts[$i];
+			push (@jstarts, $starts[$i]); 
+			$prevend = $ends[$i];
+		}
+	}
+	my $i = @starts-1;
+	print "LOHblock: $chr\t$jstart\t$prevend\n";		# last LOH block
+	print GFFOUT "$chr\tvcf2allelePlot.pl\tLOH\t$jstart\t$ends[$i]\t.\t+\t.\tLOHregion. Windowsize=$lwsize; snp heterozygosity < 0.0005\n";
+	push (@jends,$ends[$i]);
+	
+}
+
+close ROUT;
+close GFFOUT;
 
 # SUBROUTINES 
 
