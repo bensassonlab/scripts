@@ -143,10 +143,11 @@ while (<DATA>) {
 }
 close OUT;
 
+my %meandepth;
 foreach my $chr (sort keys %count) {
 	print "$chr\tlength: $count{$chr}\ttotal read nt: $tdepth{$chr}\n";
-	my $meandepth = $tdepth{$chr}/$count{$chr};
-	print "Mean depth for $chr : $meandepth\n\n";
+	$meandepth{$chr} = $tdepth{$chr}/$count{$chr};
+	print "Mean depth for $chr : $meandepth{$chr}\n\n";
 }
 
 print "$infile\t$l\t# Length of high quality sequence (q>=$qual)\n";
@@ -295,7 +296,7 @@ points(pos[chr==\"$chr\"],depth[chr==\"$chr\"],pch=20)
 quantile(depth[chr==\"$chr\"],probs=c(0,0.005,0.025,0.5,0.975,0.995,1))
 abline(h=mean(depth[chr==\"$chr\"],col=\"blue\"))
 abline(h=as.numeric(quantile(depth[chr==\"$chr\"],0.995)),col=\"red\")
-abline(h=(meandepth*2),0.995)),col=\"green\")
+abline(h=($meandepth{$chr}*2),col=\"green\")
 legend(\"topright\",c(\"mean\",\"99% quantile\"),lty=c(1,1),col=c(\"blue\",\"red\"),bty=\"n\")
 
 ";
