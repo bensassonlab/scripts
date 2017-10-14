@@ -89,7 +89,7 @@ my $ps = 0; my $sps = 0; my $fps = 0;	# + short region sH (chr1 200,000..400,000
 my $l = 0; my $sl = 0; my $fl = 0;	# + annotation-filtered fH genome-wide
 my $H3; my $ps3 = 0; my $l3 =0;		# + short region sH (chr1 900,000..1,100,000)
 
-my (%depth,%tdepth);
+my (%depth,%tdepth,%count);
 
 while (<DATA>) { 
 								# find the lines with data 
@@ -117,10 +117,14 @@ while (<DATA>) {
 			}  
 			if ($filter eq "no") { $fl++; }
 		}	
-		$depth{$chr}[$pos] = $6+$7+$8+$9;		
+		$depth{$chr}[$pos] = $6+$7+$8+$9;			# store depth info for whole genome (to create filter later)
+		$tdepth{$chr} += $6+$7+$8+$9;				# estimate total depth (for average depth calculation)
+		$count{$chr}++;
+#		print "$chr $count{$chr}\t[$depth{$chr}[$pos]]\t{$tdepth{$chr}}\n";
+		
 		if ($alt eq ".") { next; }				# invariant site
 				
-		my $pAlt = ($8+$9)/$depth;
+		my $pAlt = ($8+$9)/$depth{$chr}[$pos];
 		print OUT "$chr\t$2\t$3\t$4\t$5\t$6\t$7\t$8\t$9\t$pAlt\t";
 		$chr{$chr}++;					# a hash storing chromosome names and the number of variant sites for each
 		my $variant = "snp";				# a non-SNP variant
@@ -138,6 +142,12 @@ while (<DATA>) {
 	}
 }
 close OUT;
+
+foreach my $chr (sort keys %count) {
+	print "$chr\tlength: $count{$chr}\ttotal read nt: $tdepth{$chr}\n";
+	my $meandepth = $tdepth{$chr}/$count{$chr};
+	print "Mean depth for $chr : $meandepth\n\n";
+}
 
 print "$infile\t$l\t# Length of high quality sequence (q>=$qual)\n";
 print "$infile\t$ps\t# Number of high quality point subs (q>=$qual)\n";
@@ -285,10 +295,11 @@ points(pos[chr==\"$chr\"],depth[chr==\"$chr\"],pch=20)
 quantile(depth[chr==\"$chr\"],probs=c(0,0.005,0.025,0.5,0.975,0.995,1))
 abline(h=mean(depth[chr==\"$chr\"],col=\"blue\"))
 abline(h=as.numeric(quantile(depth[chr==\"$chr\"],0.995)),col=\"red\")
+abline(h=(meandepth*2),0.995)),col=\"green\")
 legend(\"topright\",c(\"mean\",\"99% quantile\"),lty=c(1,1),col=c(\"blue\",\"red\"),bty=\"n\")
 
 ";
-	
+	}
 	print RCMD "rm(W,modepALTsnp,modepALTindel)\n";			# CLEAN UP
 
 
