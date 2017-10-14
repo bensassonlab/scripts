@@ -89,6 +89,8 @@ my $ps = 0; my $sps = 0; my $fps = 0;	# + short region sH (chr1 200,000..400,000
 my $l = 0; my $sl = 0; my $fl = 0;	# + annotation-filtered fH genome-wide
 my $H3; my $ps3 = 0; my $l3 =0;		# + short region sH (chr1 900,000..1,100,000)
 
+my (%depth,%tdepth);
+
 while (<DATA>) { 
 								# find the lines with data 
 	if (/^(\S+)\s+(\d+)\s+\.\s+(\S+)\s+(\S+)\s+(\S+)\s+\.\s+\S+?DP4=(\d+),(\d+),(\d+),(\d+)/m) {
@@ -114,11 +116,11 @@ while (<DATA>) {
 				}
 			}  
 			if ($filter eq "no") { $fl++; }
-		}		
+		}	
+		$depth{$chr}[$pos] = $6+$7+$8+$9;		
 		if ($alt eq ".") { next; }				# invariant site
-			
-		
-		my $pAlt = ($8+$9)/($6+$7+$8+$9);
+				
+		my $pAlt = ($8+$9)/$depth;
 		print OUT "$chr\t$2\t$3\t$4\t$5\t$6\t$7\t$8\t$9\t$pAlt\t";
 		$chr{$chr}++;					# a hash storing chromosome names and the number of variant sites for each
 		my $variant = "snp";				# a non-SNP variant
@@ -270,16 +272,22 @@ abline(h=0.5)
 abline(h=mean(pALT[chr==\"$chr\"&QUAL>=$qual&type==\"indel\"]),col=\"orange\")
 legend(0,-0.16,c(round(mean(pALT[chr==\"$chr\"&QUAL>=$qual&type==\"indel\"]),3),0.5),lty=c(1,1),col=c(\"orange\",\"black\"),title=\"mean\",bty=\"n\")
 ";
+
+	if (defined $parameters{'g'}) { annotate($chr); }		# show annotations on INDEL plot if requested (in progress)
+	if (defined $parameters{'m'}) { showmode($chr,"indel"); }	# show mode if requested
+
 	}
 	else {					# plot read depth for each point sub
 		print RCMD "
 depth<-REFfwd+REFrev+ALTfwd+ALTrev
-plot(c(0,max(pos[chr==\"$chr\"])),c(0,max(depth[chr==\"$chr\"])),type='n',ylab=\"depth\",xlab=\"position\", main=\"$chr: Depth at positions of point substitutions\")
-";
-	}
+plot(c(0,max(W)),c(0,max(depth[chr==\"$chr\"])),type='n',ylab=\"depth\",xlab=\"position\", main=\"$chr: Depth at positions of point substitutions\",xlim=c(1,max(pos[chr==\"$chr\"])))
+points(pos[chr==\"$chr\"],depth[chr==\"$chr\"],pch=20)
+quantile(depth[chr==\"$chr\"],probs=c(0,0.005,0.025,0.5,0.975,0.995,1))
+abline(h=mean(depth[chr==\"$chr\"],col=\"blue\"))
+abline(h=as.numeric(quantile(depth[chr==\"$chr\"],0.995)),col=\"red\")
+legend(\"topright\",c(\"mean\",\"99% quantile\"),lty=c(1,1),col=c(\"blue\",\"red\"),bty=\"n\")
 
-	if (defined $parameters{'m'}) { showmode($chr,"indel"); }	# show mode if requested
-	if (defined $parameters{'g'}) { annotate($chr); }		# show annotations on INDEL plot if requested (in progress)
+";
 	
 	print RCMD "rm(W,modepALTsnp,modepALTindel)\n";			# CLEAN UP
 
@@ -360,11 +368,15 @@ sub annotate {
 						# annotate the plot with slightly transparent colored rectangles
 	my $chr = shift;
 
+	my $height = 10000;
+
+	print RCMD "par(xpd=F)\n";	# do not print rectangles outside the plot	
+
 	for (my $i=0; $i<@{$astart{$chr}}; $i++) {
 		my $j;				# use a number from 1 to n for type color	
 		for ($j=0; $j<@types; $j++) { if ($atype{$chr}[$i] eq $types[$j]) { $j += 1; last; } }	
 			
-		print RCMD "rect($astart{$chr}[$i],0,$aend{$chr}[$i],1,col=rainbow(".@types.",alpha=0.3)[$j],border=rainbow(".@types.",alpha=0.3)[$j])\n"; 	
+		print RCMD "rect($astart{$chr}[$i],0,$aend{$chr}[$i],$height,col=rainbow(".@types.",alpha=0.3)[$j],border=rainbow(".@types.",alpha=0.3)[$j])\n"; 	
 
 	}
 	print RCMD "par(xpd=T)\n";	# do print legend outside the plot	
