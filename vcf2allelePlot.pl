@@ -20,7 +20,7 @@ getopts('i:o:q:g:w:mhI',\%parameters);
 if (exists $parameters{"i"}) { $infile = $parameters{"i"}; }
 if (exists $parameters{"q"}) { $qual = $parameters{"q"}; }
 if (exists $parameters{"g"}) { $gffile = $parameters{"g"}; }
-if (exists $parameters{"o"}) { $outfile = $parameters{"o"}; }
+if (exists $parameters{"o"}) { $outfile = $parameters{"o"}.".calls"; $outprefix = $parameters{"o"}; }
 elsif (defined $infile) { 
 	if ($infile =~ /^(.+)\.\S+?$/m) { $outfile = "$1.calls"; $outprefix = $1; }
 	else { $outfile = "$infile.calls"; $outprefix = $1; }
@@ -67,6 +67,7 @@ if (defined $gffile) {
 	@types = sort keys %seentype;
 	print "   Found annotations for ".@chr." chromosomes: @chr\n";
 	print "   There are ".@types." types of annotation: @types\n";
+	unless (defined $chr[0]) { warn "ERROR: $gffile is empty or has an unrecognized format!\n"; }
 
 }
 
@@ -79,7 +80,7 @@ open DATA, "<$infile" or die "couldn't open $infile : $!";
 
 open OUT, ">$outfile" or die "couldn't open $outfile : $!";
 
-print OUT "chr\tpos\tREF\tALT\tQUAL\tREFfwd\tREFrev\tALTfwd\tALTrev\tpALT\ttype\n";
+print OUT "chr\tpos\tREF\tALT\tQUAL\tREFfwd\tREFrev\tALTfwd\tALTrev\tpALT\ttype\tfilter\n";
 
 print "\nReading and printing data from $infile to $outfile ..\n";
 
@@ -110,8 +111,10 @@ while (<DATA>) {
 
 			foreach my $achr (@chr) { 
 				if ($chr eq $achr) { 	
-					for (my $i=0; $i < @{$astart{$chr}}; $i++) {
-						if (($pos > $astart{$chr}[$i]) && ($pos <= $aend{$chr}[$i])) { $filter = "yes"; }		
+					for (my $i=0; $i < @{$astart{$chr}}; $i++) {		# NOTE: filter does not flag low quality seq
+						if (($pos > $astart{$chr}[$i]) && ($pos <= $aend{$chr}[$i])) { 
+							$filter = $gffile."_filter"; 
+						}		
 					}
 				}
 			}  
@@ -130,7 +133,7 @@ while (<DATA>) {
 		my $variant = "snp";				# a non-SNP variant
 		unless (($ref =~/^\S$/m) && ($ref =~ /^\S$/m)) { $variant = "indel"; }	
 		if ($alt =~ /[A-Z][A-Z]/mi) { $variant = "indel"; }	 	# indels are missed without this
-		print OUT "$variant\n";
+		print OUT "$variant\t$filter\n";
 
 		if (($variant eq "snp") && ($q>=$qual) && ($pAlt>=0.2) && ($pAlt<=0.8))	{ 		# point sub with 0.2-0.8 allele ratio?
 			$ps++; 										# genome-wide
@@ -152,11 +155,11 @@ foreach my $chr (sort keys %count) {
 
 print "$infile\t$l\t# Length of high quality sequence (q>=$qual)\n";
 print "$infile\t$ps\t# Number of high quality point subs (q>=$qual)\n";
-print "$infile\t".($ps/$l)."\t# Genomewide heterozygosity (\$ps/\$l)\n";
+print "$infile\t".($ps/$l)."\t( $ps / $l )\t# Genomewide heterozygosity (\$ps/\$l)\n";
 
 print "\n$infile\t$fl\t# Length of unannotated sequence (q>=$qual)\n";
 print "$infile\t$fps\t# Number of point subs that are unannotated (q>=$qual)\n";
-print "$infile\t".($fps/$fl)."\t# Unannotated heterozygosity (\$fps/\$fl)\n";
+print "$infile\t".($fps/$fl)."\t( $fps / $fl )\t# Unannotated heterozygosity ($gffile)\n";
 
 if ($sl > 0) {
 	print "\n$infile\t$sl\t# Length of sequence on chr1 200,000..400,000 (q>=$qual)\n";
@@ -186,6 +189,24 @@ Mode <- function(x) {
   ux <- unique(x)
   ux[which.max(tabulate(match(x, ux)))]
 }
+
+				# Visualise LOH threshold in whole-geome analysis
+glx<-ceiling(max(pos[QUAL>=40])/100000)
+glW<-1:((glx/($lwsize/1000))*100)*$lwsize-($lwsize/2)
+head(glW)
+tail(glW)
+gldiff_snp<-0
+glerr_snp<-0
+glhet_snp<-0
+
+for(i in 1:length(glW)) { 
+	gldiff_snp[i] <- sum(pALT[pos>(glW[i]-($lwsize/2))&pos<=(glW[i]+($mwsize/2))&QUAL>=$qual&type==\"snp\"]>0.8) 
+	glerr_snp[i] <- sum(pALT[pos>(glW[i]-($lwsize/2))&pos<=(glW[i]+($mwsize/2))&QUAL>=$qual&type==\"snp\"]<0.2) 
+	glhet_snp[i] <- sum(pALT[pos>(glW[i]-($lwsize/2))&pos<=(glW[i]+($mwsize/2))&QUAL>=$qual&type==\"snp\"])-glerr_snp[i]-gldiff_snp[i]
+}
+
+hist(glhet_snp/$lwsize,20)
+abline(v=0.0005,col=\"red\")
 
 ";
 								# add an extra plot for heterozygosity if requested
@@ -297,10 +318,14 @@ quantile(depth[chr==\"$chr\"],probs=c(0,0.005,0.025,0.5,0.975,0.995,1))
 abline(h=mean(depth[chr==\"$chr\"],col=\"blue\"))
 abline(h=as.numeric(quantile(depth[chr==\"$chr\"],0.995)),col=\"red\")
 abline(h=($meandepth{$chr}*2),col=\"green\")
-legend(\"topright\",c(\"mean\",\"99% quantile\"),lty=c(1,1),col=c(\"blue\",\"red\"),bty=\"n\")
+abline(h=($meandepth{$chr}*2),col=\"purple\")
+legend(\"topright\",c(\"mean\",\"99% quantile\",\"mean*3\"),lty=c(1,1,1),col=c(\"blue\",\"red\",\"purple\"),bty=\"n\")
 
 ";
 	}
+
+	if (defined $parameters{'g'}) { annotate($chr); }		# show annotations on read depth plot if requested (in progress)
+
 	print RCMD "rm(W,modepALTsnp,modepALTindel)\n";			# CLEAN UP
 
 
@@ -383,6 +408,8 @@ sub annotate {
 	my $height = 10000;
 
 	print RCMD "par(xpd=F)\n";	# do not print rectangles outside the plot	
+
+	unless (defined $astart{$chr}[0]) { last; }
 
 	for (my $i=0; $i<@{$astart{$chr}}; $i++) {
 		my $j;				# use a number from 1 to n for type color	
