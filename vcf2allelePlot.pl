@@ -20,10 +20,10 @@ getopts('i:o:q:g:w:DmhI',\%parameters);
 if (exists $parameters{"i"}) { $infile = $parameters{"i"}; }
 if (exists $parameters{"q"}) { $qual = $parameters{"q"}; }
 if (exists $parameters{"g"}) { $gffile = $parameters{"g"}; }
-if (exists $parameters{"o"}) { $outfile = $parameters{"o"}.".calls"; $outprefix = $parameters{"o"}; }
+if (exists $parameters{"o"}) { $outfile = $parameters{"o"}.".calls"; $outfile2 = $parameters{"o"}.".all"; $outprefix = $parameters{"o"}; }
 elsif (defined $infile) { 
-	if ($infile =~ /^(.+)\.\S+?$/m) { $outfile = "$1.calls"; $outprefix = $1; }
-	else { $outfile = "$infile.calls"; $outprefix = $1; }
+	if ($infile =~ /^(.+)\.\S+?$/m) { $outfile = "$1.calls"; $outfile2 = "$infile.all"; $outprefix = $1; }
+	else { $outfile = "$infile.calls"; $outfile2 = "$infile.all"; $outprefix = $1; }
 } 
 if (exists $parameters{"w"}) { $mwsize = $parameters{"w"}; }
 
@@ -82,10 +82,14 @@ if (defined $gffile) {
 open DATA, "<$infile" or die "couldn't open $infile : $!";
 
 open OUT, ">$outfile" or die "couldn't open $outfile : $!";
+open OUT2, ">$outfile2" or die "couldn't open $outfile2 : $!";
+
 
 print OUT "chr\tpos\tREF\tALT\tQUAL\tREFfwd\tREFrev\tALTfwd\tALTrev\tpALT\ttype\tfilter\n";
+print OUT2 "chr\tpos\tQUAL\tfilter\n";
 
-print "\nReading and printing data from $infile to $outfile ..\n";
+
+print "\nReading and printing data from $infile to $outfile and $outfile2 ..\n";
 
 my %chr;
 my ($H,$sH,$fH);			# estimate heterozygosity ($H) from the number of high quality point subs ($ps) and high quality length ($l)
@@ -130,11 +134,14 @@ while (<DATA>) {
 		$tdepth{$chr} += $6+$7+$8+$9;				# estimate total depth (for average depth calculation)
 		$count{$chr}++;
 #		print "$chr $count{$chr}\t[$depth{$chr}[$pos]]\t{$tdepth{$chr}}\n";
+
+		print OUT2 "$chr\t$2\t$5\t$filter{$chr}[$pos]\n";
 		
 		if ($alt eq ".") { next; }				# invariant site
 				
 		$pAlt{$chr}[$pos] = ($8+$9)/$depth{$chr}[$pos];
 		print OUT "$chr\t$2\t$3\t$4\t$5\t$6\t$7\t$8\t$9\t$pAlt{$chr}[$pos]\t";
+
 		$chr{$chr}++;					# a hash storing chromosome names and the number of variant sites for each
 		my $variant = "snp";				# a non-SNP variant
 		unless (($ref =~/^\S$/m) && ($ref =~ /^\S$/m)) { $variant = "indel"; }	
@@ -151,6 +158,7 @@ while (<DATA>) {
 	}
 }
 close OUT;
+close OUT2;
 
 my %meandepth;
 my $fdps=0; my $fdl=0;
@@ -218,6 +226,9 @@ rm(list=ls())
 data<-read.table(\"$outfile\",header=T)
 attach(data)
 head(data)
+data2<-read.table(\"$outfile2\",header=T)
+head(data2)
+
 pdf(\"$outprefix.$mwsize.pdf\")
 
 # CHECK R GETS THE SAME SNP TOTALS AS IN PERL STDOUT ABOVE:
@@ -243,6 +254,9 @@ gldiff_snp<-0
 glerr_snp<-0
 glhet_snp<-0	# genome-wide heterozygous (0.2-0.8) snps >= q40
 fglhet_snp<-0	# genome-wide heterozygous (0.2-0.8) snps >= q40 that are unannotated
+glhet_length<-0	# genome-wide heterozygous length >= q40
+fglhet_length<-0	# genome-wide heterozygous length >= q40 that are unannotated
+
 
 
 ";
@@ -300,40 +314,56 @@ tail(lW)
 ldiff_snp<-0
 lerr_snp<-0
 lhet_snp<-0
+lhet_length<-0
+
 fldiff_snp<-0
 flerr_snp<-0
 flhet_snp<-0
+flhet_length<-0
 
 for(i in 1:length(lW)) { 
 	ldiff_snp[i] <- sum(pALT[pos>(lW[i]-($lwsize/2))&pos<=(lW[i]+($lwsize/2))&chr==\"$chr\"&QUAL>=$qual&type==\"snp\"]>0.8) 
 	lerr_snp[i] <- sum(pALT[pos>(lW[i]-($lwsize/2))&pos<=(lW[i]+($lwsize/2))&chr==\"$chr\"&QUAL>=$qual&type==\"snp\"]<0.2) 
 	lhet_snp[i] <- sum(pALT[pos>(lW[i]-($lwsize/2))&pos<=(lW[i]+($lwsize/2))&chr==\"$chr\"&QUAL>=$qual&type==\"snp\"]<=0.8&pALT[pos>(lW[i]-($lwsize/2))&pos<=(lW[i]+($lwsize/2))&chr==\"$chr\"&QUAL>=$qual&type==\"snp\"]>=0.2)
+	lhet_length[i] <- length(pALT[data2\$pos>(lW[i]-($lwsize/2))&data2\$pos<=(lW[i]+($lwsize/2))&data2\$chr==\"$chr\"&data2\$QUAL>=$qual])
+
 	fldiff_snp[i] <- sum(pALT[pos>(lW[i]-($lwsize/2))&pos<=(lW[i]+($lwsize/2))&chr==\"$chr\"&QUAL>=$qual&type==\"snp\"&filter==\"no\"]>0.8) 
 	flerr_snp[i] <- sum(pALT[pos>(lW[i]-($lwsize/2))&pos<=(lW[i]+($lwsize/2))&chr==\"$chr\"&QUAL>=$qual&type==\"snp\"&filter==\"no\"]<0.2) 
 	flhet_snp[i] <- sum(pALT[pos>(lW[i]-($lwsize/2))&pos<=(lW[i]+($lwsize/2))&chr==\"$chr\"&QUAL>=$qual&type==\"snp\"&filter==\"no\"]<=0.8&pALT[pos>(lW[i]-($lwsize/2))&pos<=(lW[i]+($lwsize/2))&chr==\"$chr\"&QUAL>=$qual&type==\"snp\"&filter==\"no\"]>=0.2)
+	flhet_length[i] <- length(pALT[data2\$pos>(lW[i]-($lwsize/2))&data2\$pos<=(lW[i]+($lwsize/2))&data2\$chr==\"$chr\"&data2\$QUAL>=$qual&data2\$filter==\"no\"])
 
 }
+lhet<-lhet_snp/lhet_length
+flhet<-flhet_snp/flhet_length
 
 options(scipen=999)
-hqseq<-$lwsize*($l/$T)
-LOHstarts_$chr<-lW[lhet_snp/hqseq<$LOH]-($lwsize/2)
-LOHends_$chr<-lW[lhet_snp/hqseq<$LOH]+($lwsize/2)
+#hqseq<-$lwsize*($l/$T)
+#LOHstarts_$chr<-lW[lhet_snp/hqseq<$LOH]-($lwsize/2)
+#LOHends_$chr<-lW[lhet_snp/hqseq<$LOH]+($lwsize/2)
+
+LOHstarts_$chr<-lW[flhet<$LOH]-($lwsize/2)
+LOHends_$chr<-lW[flhet<$LOH]+($lwsize/2)
+
 
 LOHstarts_$chr
 LOHends_$chr
 
-head(cbind(lW,lhet_snp/hqseq))
-head(cbind(lW,flhet_snp/hqseq))
+head(cbind(lW,lhet))
+head(cbind(lW,flhet))
 
 \n";
 
 	if ($chr eq "chr1") { 
 		print RCMD "glhet_snp<-lhet_snp\n"; 
 		print RCMD "fglhet_snp<-flhet_snp\n"; 
+		print RCMD "glhet_length<-lhet_length\n"; 
+		print RCMD "fglhet_length<-flhet_length\n"; 
 	}
 	else { 
 		print RCMD "glhet_snp<-c(glhet_snp,lhet_snp)\n"; 
 		print RCMD "fglhet_snp<-c(fglhet_snp,flhet_snp)\n"; 
+		print RCMD "glhet_length<-c(glhet_length,lhet_length)\n"; 
+		print RCMD "fglhet_length<-c(fglhet_length,flhet_length)\n"; 
 	}
 
 
@@ -392,18 +422,22 @@ legend(\"topright\",c(\"mean\",\"99% quantile\",\"mean*3\"),lty=c(1,1,1),col=c(\
 
 print RCMD "sum(glhet_snp)\n";
 print RCMD "length(glhet_snp)\n";
-print RCMD "summary(glhet_snp/($lwsize*($l/$T))[glhet_snp/($lwsize*($l/$T))<0.001])\n";
+print RCMD "sum(glhet_length)\n";
+print RCMD "length(glhet_length)\n";
+print RCMD "summary((glhet_snp/glhet_length)[glhet_snp/glhet_length<0.001])\n";
 
 print RCMD "sum(fglhet_snp)\n";
 print RCMD "length(fglhet_snp)\n";
+print RCMD "sum(fglhet_length)\n";
+print RCMD "length(fglhet_length)\n";
 
 
 print RCMD "par(mfrow=c(2,1))\n";
 
-print RCMD "hist(glhet_snp/hqseq,20,main=\"Unfiltered heterozygosity q40+\")\n";
+print RCMD "hist(glhet_snp/glhet_length,20,main=\"Unfiltered heterozygosity q40+\")\n";
 print RCMD "abline(v=$LOH,col=\"red\")\n";
 
-print RCMD "hist(fglhet_snp/($lwsize*($fl/$T)),20,main=\"Unannotated heterozygosity q40+\")\n";
+print RCMD "hist(fglhet_snp/fglhet_length,20,main=\"Unannotated heterozygosity q40+\")\n";
 #print RCMD "abline(v=$LOH,col=\"red\")\n";
 
 
