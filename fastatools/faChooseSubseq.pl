@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 
-$program = 'fasta_choose.pl';
+$program = 'faChooseSubseq.pl';
 $format = 'unknown';
 ($outfile = $program) =~ s/(.*?).pl/$1.out/; 
 ($missfile = $program) =~ s/(.*?)\.pl/$1.missed/; 
@@ -171,7 +171,7 @@ if (@foundname > 0) {
 
 		if (exists $parameters{"r"}) {						# REVCOMP (-ve strand)
 			my $rev = reverse $seq{$name};					# NOTE: REVCOMP AFTER SUBSTRING
-			($seq{$name} = $rev) =~ tr/acgtACGT/tgcaTGCA/;
+			($seq{$name} = $rev) =~ tr/acgtACGTmrwsykvhdbMRWSYKVHDB/tgcaTGCAkywsrmbdhvKYWSRMBDHV/;
 			$printname .= "(-)";
 		}
 
