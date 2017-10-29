@@ -123,7 +123,7 @@ while (<DATA>) {
 
 			foreach my $achr (@chr) { 
 				if ($chr eq $achr) { 	
-					for (my $i=0; $i < @{$astart{$chr}}; $i++) {		# NOTE: filter does not flag low quality seq
+					for (my $i=0; $i < @{$astart{$chr}}; $i++) {		 
 						if (($pos > $astart{$chr}[$i]) && ($pos <= $aend{$chr}[$i])) { 
 							$filter{$chr}[$pos] = $atype{$chr}[$i]; 
 						}		
@@ -183,7 +183,7 @@ foreach my $chr (sort keys %count) {							# estimate mean depth for each chr
 				if ((defined $variant{$chr}[$pos]) && ($variant{$chr}[$pos] eq "snp") 
 					&& ($q{$chr}[$pos]>=$qual) && ($pAlt{$chr}[$pos]>=0.2) && ($pAlt{$chr}[$pos]<=0.8)) { $fdps++; }
 			}
-			else { $filter{$chr}[$pos] = "depth_filter"; }	# Not currently using %filter, but all the filtered sites should be stored here
+			else { $filter{$chr}[$pos] = "depth_filter"; }	# Not currently using %filter depth, but all the filtered sites should be stored here
 		}	
 	}
 }
@@ -206,11 +206,12 @@ print "$infile\t$ps\t# Number of high quality point subs (q>=$qual)\n";
 print "$infile\t".($ps/$l)."\t( $ps / $l )\t# Genomewide heterozygosity (\$ps/\$l)\n";
 print OUT3 "$infile\t".($ps/$l)."\t( $ps / $l )\t# Genomewide heterozygosity (\$ps/\$l)\n";
 
-
-print "\n$infile\t$fl\t# Length of unannotated sequence (q>=$qual) ".(($fl/$T)*100)."%\n";
-print "$infile\t$fps\t# Number of point subs that are unannotated (q>=$qual)\n";
-print "$infile\t".($fps/$fl)."\t( $fps / $fl )\t# Unannotated heterozygosity ($gffile)\n";
-print OUT3 "$infile\t".($fps/$fl)."\t( $fps / $fl )\t# Unannotated heterozygosity ($gffile)\n";
+if (exists $parameters{"g"}) {
+	print "\n$infile\t$fl\t# Length of unannotated sequence (q>=$qual) ".(($fl/$T)*100)."%\n";
+	print "$infile\t$fps\t# Number of point subs that are unannotated (q>=$qual)\n";
+	print "$infile\t".($fps/$fl)."\t( $fps / $fl )\t# Unannotated heterozygosity ($gffile)\n";
+	print OUT3 "$infile\t".($fps/$fl)."\t( $fps / $fl )\t# Unannotated heterozygosity ($gffile)\n";
+}
 
 if ((exists $parameters{"D"}) && ($fdl > 0))  {
 	print "\n$infile\t$fdl\t# Length of unannotated sequence <=3xmean per chr (q>=$qual)  ".(($fdl/$T)*100)."%\n";
@@ -519,9 +520,11 @@ while ($results =~ /LOHstarts_(chr[a-z0-9]+).*?(\s+\S+\s+.*?)LOHends_(chr[a-z0-9
 	}
 	my $i = @starts-1;
 	print "$infile\tLOHblock: $chr\t$jstart\t$prevend\n";		# last LOH block
-	print GFFOUT "$chr\tvcf2allelePlot.pl\tLOH\t$jstart\t$ends[$i]\t.\t+\t.\tLOHregion. Windowsize=$lwsize; snp heterozygosity < $LOH\n";
-	push (@jends,$ends[$i]);
-	
+	if ($jstart ne "none") {
+		print GFFOUT "$chr\tvcf2allelePlot.pl\tLOH\t$jstart\t$ends[$i]\t.\t+\t.\tLOHregion. Windowsize=$lwsize; snp heterozygosity < $LOH\n";
+		push (@jends,$ends[$i]);
+	}
+	else { warn "no LOH regions found in $RcmdFile.Rout\n"; } 
 }
 
 close ROUT;
