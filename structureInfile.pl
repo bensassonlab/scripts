@@ -6,7 +6,7 @@ use Getopt::Std;
 
 my $program = 'structureInfile.pl';				#name of script
 
-my $seq_recog = "0-9A-Z";					# SO INDEXES ARE RECOGNISED
+my $seq_recog = "A-Z";					
 my %parameters;							#input parameters
 my ($alignment,$suffix,$popfile);
 my $prefix = "al2variable";
@@ -16,6 +16,12 @@ my %bases = (
 	c => 2,
 	g => 3,
 	t => 4,
+	k => 5,
+	m => 6,
+	r => 7,
+	s => 8,
+	w => 9,
+	y => 10,
 	n => -9,
 	'-' => -9,
 );
@@ -38,6 +44,7 @@ unless ((exists $parameters{"a"}) || ($parameters{"s"})) {
 	print	"    -g\tinclude gaps\n";
 	print	"    -p\tfile with list of popns: 'popNo StartOfName'\n";
 	print 	"    -o\tfilename prefix for output [$prefix]\n\n";
+	print 	"  NOTE: treats ambiguity codes as heterozygous genotypes (not tested)\n\n";	
 	exit;
 }
 
@@ -115,7 +122,7 @@ foreach my $alignment (@alignments) {
 		my ($nt, $first);
 		foreach my $name (@names) {
 			if (($i < ($start{$name}-1)) || ($i >= $end{$name})) { next; }	# skip start and end with no seq
-			if ($seqarray{$name}[$i] =~ /[acgt]/i) {			# grab variable sites not including indels
+			if ($seqarray{$name}[$i] =~ /[$seq_recog]/i) {			# grab variable sites not including indels
 				unless (defined $nt) { $nt = $seqarray{$name}[$i]; }	# first sequence
 				elsif ($seqarray{$name}[$i] !~ /$nt/i) { 		# nucleotide is not the same as in prev OTU
 					push (@{$variable{$alignment}},$i); 
