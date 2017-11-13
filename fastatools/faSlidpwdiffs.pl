@@ -14,7 +14,7 @@ my $outfile;
 my $seq_recog = "a-z";				
 my $W = 5000;						# window size
 my $minW = $W*0.8;
-my $exc = "NCYC";
+my $exc = "'NCYC4146 1AA'";
 my $NAcolor = "black";
 
 my %ambcodes = (
@@ -39,7 +39,6 @@ if (exists $parameters{"e"}) { $exc = $parameters{"e"}; }
 
 unless (((exists $parameters{"i"}) || (exists $parameters{"I"})) && (exists $parameters{"r"})) {
 	print "\n USAGE: $program -i <infile> -r <ref>\n\n";
-
 	print   "    -i\tfasta format infile\n";
 	print   "    -I\tprefix for fasta format infile group (e.g. chr)\n";
 	print   "    -r\treference seq name (e.g. P34048)\n";
@@ -48,6 +47,7 @@ unless (((exists $parameters{"i"}) || (exists $parameters{"I"})) && (exists $par
 	print   "    -c\toptional cladefile (define clades to ID nearest clade)\n";
 	print   "    -C\tfile of colors for clades (to go with -c)\n";
 	print   "    -e\texclude strains matching a pattern [$exc]\n\n";
+	print   " This script will summarise pairwise differences from a study strain in an alignment, and will optionally use R to paint chromosomes according to similarity with strains from known clades\n\n";
 	print   " NOTE: ambiguity codes are treated as both bases (e.g. Y=C,Y=T)\n";
 	print   " Format for cladefile: list of 'seqname cladename' (e.g. 'P87	4')\n\n";
 	exit;
@@ -55,7 +55,7 @@ unless (((exists $parameters{"i"}) || (exists $parameters{"I"})) && (exists $par
 
 my $pdf = "$ref.paintchr.pdf";
 
-my (%clades,%colors);
+my (%clades,%colors,%multiples);	# need to handle multiple clade hits with smaller rectangles? %multiples: not written yet
 if (defined $cladefile) {
 	open CLADES, "<$cladefile" or die "couldn't open $cladefile : $!";
 	while (<CLADES>) { 
@@ -95,10 +95,20 @@ foreach my $infile (@infiles) {
 	($length,$seq_ref,@namesinfile) = fasta2strings($infile,$seq_recog);	# FASTA FORMAT SEQ
 	%seq = %$seq_ref;
 
-	my @temp;
+	my (@temp,%exc);
 	if (defined $exc) {
-		foreach my $name (@namesinfile) { unless ($name =~ /$exc/) { push (@temp,$name); } }
-		@namesinfile = @temp;
+
+		foreach my $name (@namesinfile) { 
+			if ($exc =~ /\S+\s+.*?/) {				# if there is > 1 pattern match to make (INCOMPLETE)
+				while ($exc =~ /(\S+)/g) { if ($name =~ /$1/) { $exc{$name}++; print "exclude $name\n"; } }
+			}
+			else { unless ($name =~ /$exc/) { push (@temp,$name); } }
+		}
+		unless (defined $temp[0]) { 
+			foreach my $name (@namesinfile) { unless (defined $exc{$name}) { push (@temp,$name); } }
+		}
+		if (defined $temp[0]) { @namesinfile = @temp; print "$infile strains to study: @namesinfile)\n"; }
+
 	}
 
 	unless (defined $seq{$ref}) { die "error: could not find reference sequence called $ref\n"; }
@@ -214,7 +224,7 @@ par(mfrow=c(8,1),mar=c(1,1,1,1),yaxt='n',xlab='',bty=\"n\")
 ";
 
 
-foreach my $infile (@infiles) {
+foreach my $infile (sort @infiles) {
 	print RCMD "
 plot(c(0,max(winpos)),c(0,100),type=\"n\",main=\"$ref.$infile\",yaxt=\'n\',xaxt=\'n\')
 rect(winpos[infile==\"$infile\"]-100000,0,winpos[infile==\"$infile\"],100,col=as.vector(cladecolor[infile==\"$infile\"]))
