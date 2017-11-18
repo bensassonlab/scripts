@@ -10,12 +10,12 @@ my $program = 'faChrompaint.pl';			#name of script
 
 my %parameters;						#input parameters
 my ($infile,$cladefile,$colorfile,$ref, $infile_recog);
-my $outfile;
 my $seq_recog = "a-z";				
-my $W = 5000;						# window size
+my $W = 100000;						# window size
 my $minW = $W*0.8;
 my $exc = "'NCYC4146 1AA'";
 my $NAcolor = "black";
+
 
 my %ambcodes = (
 	"M" => "AC",
@@ -43,7 +43,7 @@ unless (((exists $parameters{"i"}) || (exists $parameters{"I"})) && (exists $par
 	print   "    -I\tprefix for fasta format infile group (e.g. chr)\n";
 	print   "    -r\treference seq name (e.g. P34048)\n";
 	print   "    -W\tsliding window size [$W bp]\n";
-	print   "    -m\tminimum good seq length for determining nearest strain [$minW bp]\n";
+	print   "    -m\tminimum good seq length for determining nearest strain [0.8*W]\n";
 	print   "    -c\toptional cladefile (define clades to ID nearest clade)\n";
 	print   "    -C\tfile of colors for clades (to go with -c)\n";
 	print   "    -e\texclude strains matching a pattern [$exc]\n\n";
@@ -54,6 +54,8 @@ unless (((exists $parameters{"i"}) || (exists $parameters{"I"})) && (exists $par
 }
 
 my $pdf = "$ref.paintchr.pdf";
+my $outfile = "$ref.pDiffs.tsv";
+open OUT, ">$outfile" or die "couldn't open $outfile : $!";
 
 my (%clades,%colors,%multiples);	# need to handle multiple clade hits with smaller rectangles? %multiples: not written yet
 if (defined $cladefile) {
@@ -88,7 +90,6 @@ else { print NEAREST "ref\tinfile\twinpos\tneareststrains\n"; }
 
 
 foreach my $infile (@infiles) {
-	$outfile = "$ref$infile.tsv";
 
 
 	my ($seq_ref,@namesinfile,%seq,$length);
@@ -107,13 +108,11 @@ foreach my $infile (@infiles) {
 		unless (defined $temp[0]) { 
 			foreach my $name (@namesinfile) { unless (defined $exc{$name}) { push (@temp,$name); } }
 		}
-		if (defined $temp[0]) { @namesinfile = @temp; print "$infile strains to study: @namesinfile)\n"; }
+		if (defined $temp[0]) { @namesinfile = @temp; print "$infile strains to study: @namesinfile\n"; }
 
 	}
 
 	unless (defined $seq{$ref}) { die "error: could not find reference sequence called $ref\n"; }
-
-	open OUT, ">$outfile" or die "couldn't open $outfile : $!";
 
 	if (defined $cladefile) { print OUT "file\tref\trefClade\tstrain\tstrainClade\tpos\tdiffs\tlengthNotN\tpDiff\n"; }
 	else { print OUT "file\tref\tstrain\tpos\tdiffs\tlengthNotN\tpDiff\n"; }
@@ -130,6 +129,7 @@ foreach my $infile (@infiles) {
 		if ($name eq $ref) { next; }					# skip the ref (compare other seqs to ref only)
 		my $Wi = 0; my $diff = 0; my $T = 0; my $l = 0;				# position in window
 		for (my $i=0; $i < @{$seq{$name}}; $i++) {
+			if ((!defined $seq{$name}[$i]) || (!defined $seq{$ref}[$i])) { next; }	# avoid warnings with uneven chr lengths
 			if (($seq{$name}[$i] eq "N") || ($seq{$name}[$i] eq "n") || ($seq{$ref}[$i] eq "N") || ($seq{$ref}[$i] eq "n")) { $Wi++; }	# skip low quality sequence in length
 			elsif ($seq{$name}[$i] eq $seq{$ref}[$i]) { $Wi++; $l++; }	# no difference from reference
 			elsif (($seq{$name}[$i] =~ /[MRWSYK]/) && ($seq{$ref}[$i] =~ /[$ambcodes{$seq{$name}[$i]}]/)) {	# seq is heterozygous and matches one allele of ref 
@@ -164,7 +164,6 @@ foreach my $infile (@infiles) {
 			}
 		}	
 	}
-	close OUT;
 
 	print "Summary of pairwise divergences between $ref and ".@namesinfile." sequences is in $outfile. The sliding window size was $W bp.\n\nThe sequence names compared to $ref were:\n@namesinfile\n\n";
 
@@ -189,6 +188,10 @@ foreach my $infile (@infiles) {
 				}
 
 				print "$ref\t$clades{$ref}\t$infile\t$T\t$nearclade\t$nearstrain{$T}\n"; 
+				if (!defined $colors{$nearclade}) { 
+					warn "No color specified for $nearstrain{$T} in Clade $nearclade, will use black\n";  
+					$colors{$nearclade} = "black"; 
+				}
 				print NEAREST "$ref\t$clades{$ref}\t$infile\t$T\t$nearclade\t\"$colors{$nearclade}\"\t$nearstrain{$T}\n"; 
 	
 			} 							
@@ -204,8 +207,8 @@ foreach my $infile (@infiles) {
 
 }
 
+close OUT;
 close NEAREST;
-
 
 
 
