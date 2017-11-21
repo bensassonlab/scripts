@@ -13,8 +13,9 @@ my ($infile,$cladefile,$colorfile,$ref, $infile_recog);
 my $seq_recog = "a-z";				
 my $W = 100000;						# window size
 my $minW = $W*0.8;
-my $exc = "'NCYC4146 1AA'";
+my $exc = "'NCYC4146 1AA SC5314_A'";
 my $NAcolor = "black";
+my $maxintracladediffs = 0.001183812;			# if nearest distance is above this threshold, then nearest clade = "NA" and $NAcolor will be used
 
 
 my %ambcodes = (
@@ -26,7 +27,7 @@ my %ambcodes = (
 	"K" => "GT",
 );
 
-getopts('i:r:W:m:c:e:I:C:',\%parameters);
+getopts('i:r:W:m:c:e:I:C:M:',\%parameters);
 
 if (exists $parameters{"i"}) { $infile = $parameters{"i"}; }
 if (exists $parameters{"I"}) { $infile_recog = $parameters{"I"}; }
@@ -36,6 +37,8 @@ if (exists $parameters{"m"}) { $minW = $parameters{"m"}; }
 if (exists $parameters{"c"}) { $cladefile = $parameters{"c"}; }
 if (exists $parameters{"C"}) { $colorfile = $parameters{"C"}; }
 if (exists $parameters{"e"}) { $exc = $parameters{"e"}; }
+if (exists $parameters{"M"}) { $maxintracladediffs = $parameters{"M"}; }
+
 
 unless (((exists $parameters{"i"}) || (exists $parameters{"I"})) && (exists $parameters{"r"})) {
 	print "\n USAGE: $program -i <infile> -r <ref>\n\n";
@@ -46,10 +49,12 @@ unless (((exists $parameters{"i"}) || (exists $parameters{"I"})) && (exists $par
 	print   "    -m\tminimum good seq length for determining nearest strain [0.8*W]\n";
 	print   "    -c\toptional cladefile (define clades to ID nearest clade)\n";
 	print   "    -C\tfile of colors for clades (to go with -c)\n";
+	print   "    -M\tmaximum intraclade pDiffs [$maxintracladediffs]\n";
 	print   "    -e\texclude strains matching a pattern [$exc]\n\n";
 	print   " This script will summarise pairwise differences from a study strain in an alignment, and will optionally use R to paint chromosomes according to similarity with strains from known clades\n\n";
 	print   " NOTE: ambiguity codes are treated as both bases (e.g. Y=C,Y=T)\n";
-	print   " Format for cladefile: list of 'seqname cladename' (e.g. 'P87	4')\n\n";
+	print   " Format for cladefile: list of 'seqname cladename' (e.g. 'P87	4')\n";
+	print   " Format for colorfile: list of 'cladename color' (e.g.'1 #dd1c77')\n\n";
 	exit;
 }
 
@@ -85,11 +90,11 @@ print "\nFiles to analyse: @infiles\n";
 my $nearestout = "$ref.nearest.tsv";
 
 open NEAREST, ">$nearestout" or die "couldn't open $nearestout : $!"; 
-if (defined $cladefile) { print NEAREST "ref\trefclade\tinfile\twinpos\tnearestclade\tcladecolor\tneareststrains\n"; }
-else { print NEAREST "ref\tinfile\twinpos\tneareststrains\n"; }
+if (defined $cladefile) { print NEAREST "ref\trefclade\tinfile\twinpos\tnearestclade\tcladecolor\tneareststrains\tnearestpdiff\n"; }
+else { print NEAREST "ref\tinfile\twinpos\tneareststrains\tnearestpdiff\n"; }
 
 
-foreach my $infile (@infiles) {
+foreach my $infile (sort @infiles) {
 
 
 	my ($seq_ref,@namesinfile,%seq,$length);
@@ -117,7 +122,7 @@ foreach my $infile (@infiles) {
 	if (defined $cladefile) { print OUT "file\tref\trefClade\tstrain\tstrainClade\tpos\tdiffs\tlengthNotN\tpDiff\n"; }
 	else { print OUT "file\tref\tstrain\tpos\tdiffs\tlengthNotN\tpDiff\n"; }
 
-	my (%minpdiff,%nearstrain);
+	my (%minpdiff,%nearstrain,%nearestpdiff);
 
 	if ((defined $cladefile) && (!defined $clades{$ref})) { $clades{$ref} = "NA"; }
 
@@ -144,17 +149,19 @@ foreach my $infile (@infiles) {
 				if ($l == 0) { 
 					if (defined $cladefile) { print OUT "$infile\t$ref\t$clades{$ref}\t$name\t$clades{$name}\t$T\t$diff\t$l\tNA\n"; }
 					else { print OUT  "$infile\t$ref\t$name\t$T\t$diff\t$l\tNA\n"; }
-					if (!defined $nearstrain{$T}) { $nearstrain{$T} = "NA"; } 
+					if (!defined $nearstrain{$T}) { $nearstrain{$T} = "NA"; $nearestpdiff{$T} = "NA"; } 
 				}
 				else {	
 					my $pDiff = $diff/$l;
-					if ($l >= $minW) {
-						if ((defined $nearstrain{$T}) && ($nearstrain{$T} eq "NA")) { $minpdiff{$T} = $pDiff; $nearstrain{$T} = $name; }
-						if (!defined $minpdiff{$T}) { $minpdiff{$T} = $pDiff; $nearstrain{$T} = $name; }
-						elsif ($pDiff < $minpdiff{$T}) { $minpdiff{$T} = $pDiff; $nearstrain{$T} = $name; }
+					if (($l >= $minW) && ($pDiff < $maxintracladediffs)) {
+						if ((defined $nearstrain{$T}) && ($nearstrain{$T} eq "NA")) { 
+							$minpdiff{$T} = $pDiff; $nearstrain{$T} = $name; $nearestpdiff{$T} = $pDiff;
+						}
+						if (!defined $minpdiff{$T}) { $minpdiff{$T} = $pDiff; $nearstrain{$T} = $name; $nearestpdiff{$T} = $pDiff; }
+						elsif ($pDiff < $minpdiff{$T}) { $minpdiff{$T} = $pDiff; $nearstrain{$T} = $name; $nearestpdiff{$T} = $pDiff; }
 						elsif ($pDiff == $minpdiff{$T}) { $nearstrain{$T} .= ",$name" ; }
 					} 
-			#		else { $nearstrain{$T} = "NA"; }
+					elsif (!defined $nearstrain{$T}) { $nearstrain{$T} = "NA"; $nearestpdiff{$T} = $pDiff; }
 
 					if (defined $cladefile) { print OUT "$infile\t$ref\t$clades{$ref}\t$name\t$clades{$name}\t$T\t$diff\t$l\t$pDiff\n"; }
 					else { print OUT "$infile\t$ref\t$name\t$T\t$diff\t$l\t$pDiff\n"; }
@@ -171,7 +178,7 @@ foreach my $infile (@infiles) {
 # add the closest clade if a file of clades is included
 
 
-	print "ref\trefclade\tinfile\twinpos\tnearestclade\tneareststrains\n";
+	print "ref\trefclade\tinfile\twinpos\tnearestclade\tneareststrains\tnearestpdiff\n";
 
 
 	foreach my $T (sort { $a <=> $b } keys %nearstrain) {
@@ -187,19 +194,19 @@ foreach my $infile (@infiles) {
 					else { warn "not in $cladefile: ($1)\n"; }
 				}
 
-				print "$ref\t$clades{$ref}\t$infile\t$T\t$nearclade\t$nearstrain{$T}\n"; 
+				print "$ref\t$clades{$ref}\t$infile\t$T\t$nearclade\t$nearstrain{$T}\t$nearestpdiff{$T}\n"; 
 				if (!defined $colors{$nearclade}) { 
 					warn "No color specified for $nearstrain{$T} in Clade $nearclade, will use black\n";  
 					$colors{$nearclade} = "black"; 
 				}
-				print NEAREST "$ref\t$clades{$ref}\t$infile\t$T\t$nearclade\t\"$colors{$nearclade}\"\t$nearstrain{$T}\n"; 
+				print NEAREST "$ref\t$clades{$ref}\t$infile\t$T\t$nearclade\t\"$colors{$nearclade}\"\t$nearstrain{$T}\t$nearestpdiff{$T}\n"; 
 	
 			} 							
-			else { print "$ref\t$clades{$ref}\t$infile\t$T\tNA\t$nearstrain{$T}\n"; print NEAREST "$ref\t$clades{$ref}\t$infile\t$T\tNA\t$NAcolor\t$nearstrain{$T}\n"; }
+			else { print "$ref\t$clades{$ref}\t$infile\t$T\tNA\t$nearstrain{$T}\t$nearestpdiff{$T}\n"; print NEAREST "$ref\t$clades{$ref}\t$infile\t$T\tNA\t$NAcolor\t$nearstrain{$T}\t$nearestpdiff{$T}\n"; }
 
 		}
 										# NO CLADE OR COLOR FILE
-		else { 	print "$ref\t$infile\t$T\t$nearstrain{$T}\n"; print NEAREST "$ref\t$infile\t$T\t$nearstrain{$T}\n"; }
+		else { 	print "$ref\t$infile\t$T\t$nearstrain{$T}\t$nearestpdiff{$T}\n"; print NEAREST "$ref\t$infile\t$T\t$nearstrain{$T}\t$nearestpdiff{$T}\n"; }
 
 	}
 
