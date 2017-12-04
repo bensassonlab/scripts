@@ -319,7 +319,7 @@ for(i in 1:length(W)) { modepALTindel[i] <- Mode(pALT[pos>(W[i]-($mwsize/2))&pos
 
 				# MAKE SEPARATE STACKED PLOTS FOR SNPs AND INDELS
 				# SNPs
-plot(c(0,max(W)),c(0,1),main=\"$infile: $chr freq of alternate alleles\",sub=\"SNPs Q$qual+\",xlab=\"position\",xaxt=\"n\",ylab=\"allele ratio\",ylim=c(0,1),xlim=c(1,max(pos[chr==\"$chr\"])),type = \"n\")
+plot(c(0,max(W)),c(0,1),main=\"$infile: $chr freq of alternate alleles\",sub=\"SNPs Q$qual+\",xlab=\"position\",xaxt=\"n\",ylab=\"Proportion of base calls differing from reference\",ylim=c(0,1),xlim=c(1,max(pos[chr==\"$chr\"])),type = \"n\")
 points(pos[chr==\"$chr\"&QUAL>=$qual&type==\"snp\"],pALT[chr==\"$chr\"&QUAL>=40&type==\"snp\"],pch=20,col=\"black\")
 axis(1, xaxp=c(0, signif(max(pos[chr==\"$chr\"]),3), 20))
 abline(h=0.5)
@@ -374,7 +374,7 @@ head(cbind(lW,flhet))
 
 \n";
 
-	if ($firstchr++) { 
+	if (!$firstchr++) { 
 		print RCMD "glhet_snp<-lhet_snp\n"; 
 		print RCMD "fglhet_snp<-flhet_snp\n"; 
 		print RCMD "glhet_length<-lhet_length\n"; 
@@ -407,7 +407,7 @@ head(cbind(lW,flhet))
 	if (exists $parameters{"I"}) {		# plot indels instead of read depth at point subs (not useful with the -I command of mpileup)
 		print RCMD "
 				# INDELs
-plot(c(0,max(W)),c(0,1),main=\"$infile: $chr freq of alternate alleles\",sub=\"Indels Q$qual+\",xlab=\"position\",ylab=\"allele ratio\",xaxt=\"n\",ylim=c(0,1),xlim=c(1,max(pos[chr==\"$chr\"])),type = \"n\")	
+plot(c(0,max(W)),c(0,1),main=\"$infile: $chr freq of alternate alleles\",sub=\"Indels Q$qual+\",xlab=\"position\",ylab=\"Proportion of base calls differing from reference\",xaxt=\"n\",ylim=c(0,1),xlim=c(1,max(pos[chr==\"$chr\"])),type = \"n\")	
 points(pos[chr==\"$chr\"&QUAL>=$qual&type==\"indel\"],pALT[chr==\"$chr\"&QUAL>=40&type==\"indel\"],pch=20,col=\"black\")	
 axis(1, xaxp=c(0, signif(max(pos[chr==\"$chr\"]),3), 20))
 abline(h=0.5)
@@ -422,7 +422,7 @@ legend(0,-0.16,c(round(mean(pALT[chr==\"$chr\"&QUAL>=$qual&type==\"indel\"]),3),
 	else {					# plot read depth for each point sub
 		print RCMD "
 depth<-REFfwd+REFrev+ALTfwd+ALTrev
-plot(c(0,max(W)),c(0,max(depth[chr==\"$chr\"])),type='n',ylab=\"depth\",xlab=\"position\", main=\"$chr: Depth at positions of point substitutions\",xlim=c(1,max(pos[chr==\"$chr\"])))
+plot(c(0,max(W)),c(0,max(depth[chr==\"$chr\"])),type='n',ylab=\"Read depth\",xlab=\"position\", main=\"$chr: Depth at positions of point substitutions\",xlim=c(1,max(pos[chr==\"$chr\"])))
 points(pos[chr==\"$chr\"],depth[chr==\"$chr\"],pch=20)
 quantile(depth[chr==\"$chr\"],probs=c(0,0.005,0.025,0.5,0.975,0.995,1))
 abline(h=mean(depth[chr==\"$chr\"],col=\"blue\"))
@@ -451,6 +451,9 @@ print RCMD "length(fglhet_snp)\n";
 print RCMD "sum(fglhet_length)\n";
 print RCMD "length(fglhet_length)\n";
 
+print RCMD "cbind(glhet_snp,glhet_length)\n";
+
+
 
 print RCMD "par(mfrow=c(2,1))\n";
 
@@ -470,7 +473,7 @@ print "Running $RcmdFile commands in R ..\n";
 `R CMD BATCH $RcmdFile`;
 #`mv vcf2allelePlot.Rcmds.Rout $outprefix.Rout`;		# save R input and output for future reference
 #`mv vcf2allelePlot.Rcmds $outprefix.Rcmds`;		# save R input and output for future reference
-print "Done. R output is in $RcmdFile.Rout and plots are in $RcmdFile.pdf\n\n";
+print "Done. R output is in $RcmdFile.Rout and plots are in $outprefix.$mwsize.pdf\n\n";
 
 
 # READ IN R OUTPUT TO EXTRACT THE LOH REGIONS TO PRINT IN GFF FORMAT
