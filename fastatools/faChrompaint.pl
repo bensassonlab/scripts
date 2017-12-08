@@ -15,7 +15,8 @@ my $W = 100000;						# window size
 my $minW = $W*0.8;
 my $exc = "'NCYC4146 1AA SC5314_A'";
 my $NAcolor = "black";
-my $maxintracladediffs = 0.001183812;			# if nearest distance is above this threshold, then nearest clade = "NA" and $NAcolor will be used
+my $maxintracladediffs = 1;		# if nearest distance is above this threshold, then nearest clade = "NA" and $NAcolor will be used
+#my $maxintracladediffs = 0.001183812;			# if nearest distance is above this threshold, then nearest clade = "NA" and $NAcolor will be used
 
 
 my %ambcodes = (
