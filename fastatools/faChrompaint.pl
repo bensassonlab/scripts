@@ -14,7 +14,8 @@ my $seq_recog = "a-z";
 my $W = 100000;						# window size
 my $minW = $W*0.8;
 my $exc = "'NCYC4146 1AA SC5314_A'";
-my $NAcolor = "black";
+my $divcolor = "black";
+my $NAcolor = "white";
 my $maxintracladediffs = 1;		# if nearest distance is above this threshold, then nearest clade = "NA" and $NAcolor will be used
 #my $maxintracladediffs = 0.001183812;			# if nearest distance is above this threshold, then nearest clade = "NA" and $NAcolor will be used
 
@@ -122,7 +123,7 @@ foreach my $infile (sort @infiles) {
 		unless (defined $temp[0]) { 
 			foreach my $name (@namesinfile) { unless (defined $exc{$name}) { push (@temp,$name); } }
 		}
-		if (defined $temp[0]) { @namesinfile = @temp; print "$infile strains to study: @namesinfile\n"; }
+		if (defined $temp[0]) { @namesinfile = @temp; print "$infile strains to probe with: @namesinfile\n"; }
 
 	}
 
@@ -171,6 +172,9 @@ foreach my $infile (sort @infiles) {
 						elsif ($pDiff < $minpdiff{$T}) { $minpdiff{$T} = $pDiff; $nearstrain{$T} = $name; $nearestpdiff{$T} = $pDiff; }
 						elsif ($pDiff == $minpdiff{$T}) { $nearstrain{$T} .= ",$name" ; }
 					} 
+					elsif (($pDiff > $maxintracladediffs) &&  (!defined $nearstrain{$T})) { 
+						$nearstrain{$T} = "diverged"; $nearestpdiff{$T} = $pDiff; 
+					}
 					elsif (!defined $nearstrain{$T}) { $nearstrain{$T} = "NA"; $nearestpdiff{$T} = $pDiff; }
 
 					if (defined $cladefile) { print OUT "$infile\t$ref\t$clades{$ref}\t$name\t$clades{$name}\t$T\t$diff\t$l\t$pDiff\n"; }
@@ -194,7 +198,10 @@ foreach my $infile (sort @infiles) {
 	foreach my $T (sort { $a <=> $b } keys %nearstrain) {
 	
 		if (defined $cladefile) {					# USING USER-PROVIDED CLADE DEFINITIONS AND COLORS
-			if ($nearstrain{$T} ne "NA") {
+			if ($nearstrain{$T} eq "diverged") {
+				print "$ref\t$clades{$ref}\t$infile\t$T\tdiverged\t$nearstrain{$T}\t$nearestpdiff{$T}\n"; print NEAREST "$ref\t$clades{$ref}\t$infile\t$T\tdiverged\t$divcolor\t$nearstrain{$T}\t$nearestpdiff{$T}\n";
+			}
+			elsif ($nearstrain{$T} ne "NA") {
 				my $nearclade;
 				while ($nearstrain{$T} =~ /,?(\w+)/ig) { 
 					if (defined $clades{$1}) {
