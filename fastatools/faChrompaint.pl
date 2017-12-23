@@ -37,7 +37,7 @@ if (exists $parameters{"W"}) { $W = $parameters{"W"}; }
 if (exists $parameters{"m"}) { $minW = $parameters{"m"}; }
 if (exists $parameters{"c"}) { $cladefile = $parameters{"c"}; }
 if (exists $parameters{"C"}) { $colorfile = $parameters{"C"}; }
-if (exists $parameters{"e"}) { $exc = $parameters{"e"}; }
+if (exists $parameters{"e"}) { $exc = $parameters{"e"}; print "exclude: '$exc' if present\n"; }
 if (exists $parameters{"M"}) { $maxintracladediffs = $parameters{"M"}; }
 
 
@@ -59,11 +59,11 @@ unless (((exists $parameters{"i"}) || (exists $parameters{"I"})) && (exists $par
 	exit;
 }
 
-my $pdf = "$ref.paintchr.pdf";
+
 my $outfile = "$ref.pDiffs.tsv";
 open OUT, ">$outfile" or die "couldn't open $outfile : $!";
 
-my (%clades,%colors,%multiples);	# need to handle multiple clade hits with smaller rectangles? %multiples: not written yet
+my (%clades,%colors,%multiples,%multipleTs);	# need to handle multiple clade hits with smaller rectangles? %multiples: not written yet
 if (defined $cladefile) {
 	open CLADES, "<$cladefile" or die "couldn't open $cladefile : $!";
 	while (<CLADES>) { 
@@ -89,12 +89,13 @@ else {
 print "\nFiles to analyse: @infiles\n";
 
 my $nearestout = "$ref.nearest.tsv";
+my $seenFilter;
 
 open NEAREST, ">$nearestout" or die "couldn't open $nearestout : $!"; 
 if (defined $cladefile) { print NEAREST "ref\trefclade\tinfile\twinpos\tnearestclade\tcladecolor\tneareststrains\tnearestpdiff\n"; }
 else { print NEAREST "ref\tinfile\twinpos\tneareststrains\tnearestpdiff\n"; }
 
-
+my $excpdf; my %seene;
 foreach my $infile (sort @infiles) {
 
 
@@ -106,8 +107,15 @@ foreach my $infile (sort @infiles) {
 	if (defined $exc) {
 
 		foreach my $name (@namesinfile) { 
-			if ($exc =~ /\S+\s+.*?/) {				# if there is > 1 pattern match to make (INCOMPLETE)
-				while ($exc =~ /(\S+)/g) { if ($name =~ /$1/) { $exc{$name}++; print "exclude $name\n"; } }
+		#	print "do I need to exclude '$name'?\n";
+			if ($exc =~ /\S+\s+.*?/) {				# if there is > 1 pattern match to make 
+				while ($exc =~ /(\S+)/g) { 
+				#	print "checking for '$1' to exclude\n";
+ 					my $e = $1;
+					if ($name =~ /$e/) { 
+						$exc{$name}++; print "exclude $name\n"; unless ($seene{$e}++) { $excpdf .= $e; } 
+					} 
+				}
 			}
 			else { unless ($name =~ /$exc/) { push (@temp,$name); } }
 		}
@@ -123,7 +131,7 @@ foreach my $infile (sort @infiles) {
 	if (defined $cladefile) { print OUT "file\tref\trefClade\tstrain\tstrainClade\tpos\tdiffs\tlengthNotN\tpDiff\n"; }
 	else { print OUT "file\tref\tstrain\tpos\tdiffs\tlengthNotN\tpDiff\n"; }
 
-	my (%minpdiff,%nearstrain,%nearestpdiff);
+	my (%minpdiff,%nearstrain,%nearestpdiff,%seen);
 
 	if ((defined $cladefile) && (!defined $clades{$ref})) { $clades{$ref} = "NA"; }
 
@@ -155,7 +163,8 @@ foreach my $infile (sort @infiles) {
 				else {	
 					my $pDiff = $diff/$l;
 					if (($l >= $minW) && ($pDiff < $maxintracladediffs)) {
-						if ((defined $nearstrain{$T}) && ($nearstrain{$T} eq "NA")) { 
+						if ((defined $nearstrain{$T}) && ($nearstrain{$T} eq "NA")) {
+							unless ($seenFilter++) { print "filtering regions that have diverged over $maxintracladediffs from all other sequences\n"; } 
 							$minpdiff{$T} = $pDiff; $nearstrain{$T} = $name; $nearestpdiff{$T} = $pDiff;
 						}
 						if (!defined $minpdiff{$T}) { $minpdiff{$T} = $pDiff; $nearstrain{$T} = $name; $nearestpdiff{$T} = $pDiff; }
@@ -190,7 +199,20 @@ foreach my $infile (sort @infiles) {
 				while ($nearstrain{$T} =~ /,?(\w+)/ig) { 
 					if (defined $clades{$1}) {
 						if (!defined $nearclade) { $nearclade = $clades{$1}; } 
-						elsif ($nearclade ne $clades{$1}) { $nearclade = "multiple"; } 
+						elsif ($nearclade ne $clades{$1}) { 
+							if (!defined $multiples{"$infile$T"}) { 
+								push ( @{$multipleTs{"$infile"}}, $T ); 
+								push ( @{$multiples{"$infile$T"}}, $nearclade ); $seen{"$infile$T$nearclade"}++;
+								push ( @{$multiples{"$infile$T"}}, $clades{$1} ); $seen{"$infile$T$clades{$1}"}++;
+ 
+								$nearclade = "multiple";
+							}							
+							else { 
+								unless ($seen{"$infile$T$clades{$1}"}++) {
+									push (@{$multiples{"$infile$T"}},  $clades{$1}); 
+								}
+							}
+						} 
 					}
 					else { warn "not in $cladefile: ($1)\n"; }
 				}
@@ -218,8 +240,15 @@ foreach my $infile (sort @infiles) {
 close OUT;
 close NEAREST;
 
+# GIVE THE OUTPUT PDF A SENSIBLE NAME THAT KEEPS TRACK OF THE OPTIONS SELECTED
+my $pdf = $ref;
+if (defined $parameters{"M"}) { $pdf .= "paintchrM"; }
+else { $pdf .= "paintchr"; }
+if (defined $exc) { $pdf .= "e$excpdf"; }
+$pdf .= ".pdf";
 
 
+# PRINT R CMDS FOR VISUALIZING THE NEAREST SEQ IN IN EVERY WINDOW IN THE GENOME
 my $rcmdfile = "nearest$ref.R";
 open RCMD, ">$rcmdfile" or die "couldn't open $rcmdfile : $!";
 print RCMD "
@@ -236,14 +265,50 @@ par(mfrow=c(8,1),mar=c(1,1,1,1),yaxt='n',xlab='',bty=\"n\")
 
 
 foreach my $infile (sort @infiles) {
+
+# PRINT STRAIGHTFORWARD GENOME PLOTS USING USER-SPECIFIED COLOUR FOR BINS WITH TIED MATCHES
+
 	print RCMD "
+
+# PRINT STRAIGHTFORWARD GENOME PLOTS USING USER-SPECIFIED COLOUR FOR BINS WITH TIED MATCHES
+# data from $nearestout
 plot(c(0,max(winpos)),c(0,100),type=\"n\",main=\"$ref.$infile\",yaxt=\'n\',xaxt=\'n\')
 rect(winpos[infile==\"$infile\"]-100000,0,winpos[infile==\"$infile\"],100,col=as.vector(cladecolor[infile==\"$infile\"]))
 ";
+
+
+# OVERWRITE WITH SMALLER RECTANGLES TO SHOW MULTIPLE COLORS IN CASE OF TIES 
+
+	if (defined $multipleTs{"$infile"}[0]) { 
+		my @windows = @{$multipleTs{"$infile"}};
+		print "OK $infile contains equally similar sequences at ".@windows." windows: @windows\n"; 
+		foreach my $T (@windows) {
+			my @clades = sort @{$multiples{"$infile$T"}};
+			print "$infile $T [@clades]\n";
+			my $n = @clades;
+			my $low = 0;
+			my $high = 100/$n;
+			for (my $i=0; $i < @clades; $i++) { 
+				$low += 0+($i*100/$n);
+				$high += $i*100/$n;
+				print RCMD "
+
+# OVERWRITE WITH SMALLER RECTANGLES TO SHOW MULTIPLE COLORS IN CASE OF TIES 
+# data is added in using perl and is not contained in $nearestout
+rect($T-100000,$low,$T,$high,col=\"$colors{$clades[$i]}\")
+";
+			}
+		}
+	}
 }
 close RCMD;
 
+
+# RUN R
+
 `R CMD BATCH --no-restore nearest$ref.R`;
+
+
 
 					#################
 					## SUBROUTINES ##
