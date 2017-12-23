@@ -362,7 +362,7 @@ options(scipen=999)
 #LOHstarts_$chr<-lW[lhet_snp/hqseq<$LOH]-($lwsize/2)
 #LOHends_$chr<-lW[lhet_snp/hqseq<$LOH]+($lwsize/2)
 
-LOHstarts_$chr<-lW[flhet<$LOH]-($lwsize/2)
+LOHstarts_$chr<-lW[flhet<$LOH]-($lwsize/2)	# identify LOH after filtering
 LOHends_$chr<-lW[flhet<$LOH]+($lwsize/2)
 
 
