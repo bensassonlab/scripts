@@ -100,7 +100,7 @@ my $ps = 0; my $sps = 0; my $fps = 0;	# + short region sH (chr1 200,000..400,000
 my $l = 0; my $sl = 0; my $fl = 0;	# + annotation-filtered fH genome-wide
 my $H3; my $ps3 = 0; my $l3 =0;		# + short region sH (chr1 900,000..1,100,000)
 my $T;					# total length of sequence (for estimating % of 100,000 to use in histogram of heterozygosity
-
+my $triallelic = 0; my $diallelic = 0; my $totalps=0;
 
 my (%depth,%tdepth,%count,%filter,%fl,%variant,%pAlt,%q,%pos);
 
@@ -147,9 +147,10 @@ while (<DATA>) {
 		print OUT "$chr\t$2\t$3\t$4\t$5\t$6\t$7\t$8\t$9\t$pAlt{$chr}[$pos]\t";
 
 		$chr{$chr}++;					# a hash storing chromosome names and the number of variant sites for each
-		my $variant = "snp";				# a non-SNP variant
-		unless (($ref =~/^\S$/m) && ($ref =~ /^\S$/m)) { $variant = "indel"; }	
+		my $variant = "snp";				# SNP variant assumed by default
+		unless (($ref =~/^\S$/m) && ($ref =~ /^\S$/m)) { $variant = "indel"; }	# should the second $ref be $alt?		
 		if ($alt =~ /[A-Z][A-Z]/mi) { $variant = "indel"; }	 	# indels are missed without this
+								# NOTE: counting multiple hits as SNPs (e.g $alt = T,A)
 		print OUT "$variant\t$filter{$chr}[$pos]\n";
 
 		if (($variant eq "snp") && ($q{$chr}[$pos]>=$qual) && ($pAlt{$chr}[$pos]>=0.2) && ($pAlt{$chr}[$pos]<=0.8))	{ 		# point sub with 0.2-0.8 allele ratio?
@@ -157,6 +158,13 @@ while (<DATA>) {
 			if (($chr eq "chr1") && ($pos > 200000) && ($pos <= 400000)) { $sps++; } 	# 200kb on chr1
 			if (($chr eq "chr3") && ($pos > 900000) && ($pos <= 1100000)) { $ps3++; } 	# 200kb on chr1
 			if ($filter{$chr}[$pos] eq "no") { $fps++; }
+		}
+
+		if (($variant eq "snp") && ($q{$chr}[$pos]>=$qual)) {
+			$totalps++;
+			if ($alt =~ /[ACGT],[ACGT]/) { $triallelic++; }
+			elsif (($ref =~ /[ACGT]/) && ($alt =~ /[ACGT]/)) { $diallelic++; }
+			else { warn "unregognized \$ref: $ref or \$alt: $alt\n"; }
 		}
 		$variant{$chr}[$pos] = $variant;
 	}
@@ -203,34 +211,42 @@ print OUT3 "$infile\t$T\t# Length of all sequence (any quality)\n";
 
 
 print "$infile\t$l\t# Length of high quality sequence (q>=$qual) ".(($l/$T)*100)."%\n";
-print "$infile\t$ps\t# Number of high quality point subs (q>=$qual)\n";
+#print "$infile\t$totalps\t# Number of ALL high quality point subs (q>=$qual)\n";
+print "$infile\t$triallelic\t# Number of high quality triallelic point subs (q>=$qual)\n";
+print "$infile\t$diallelic\t# Number of high quality diallelic point subs (q>=$qual)\n";
+print "$infile\t$ps\t# Number of high quality heterozygous point subs (q>=$qual, allele ratio: 0.2-0.8)\n";
 print "$infile\t".($ps/$l)."\t( $ps / $l )\t# Genomewide heterozygosity (\$ps/\$l)\n";
+
+print OUT3 "$infile\t$l\t# Length of high quality sequence (q>=$qual) ".(($l/$T)*100)."%\n";
+print OUT3 "$infile\t$ps\t# Number of high quality heterozygous point subs (q>=$qual, allele ratio: 0.2-0.8)\n";
 print OUT3 "$infile\t".($ps/$l)."\t( $ps / $l )\t# Genomewide heterozygosity (\$ps/\$l)\n";
+print OUT3 "$infile\t".($triallelic/$l)."\t( $triallelic / $l )\t# Genome-wide proportion of triallelic point subs (q>=$qual)\n";
+print OUT3 "$infile\t$diallelic\t# Number of high quality diallelic point subs (q>=$qual)\n";
 
 if (exists $parameters{"g"}) {
 	print "\n$infile\t$fl\t# Length of unannotated sequence (q>=$qual) ".(($fl/$T)*100)."%\n";
-	print "$infile\t$fps\t# Number of point subs that are unannotated (q>=$qual)\n";
+	print "$infile\t$fps\t# Number of heterozygous point subs that are unannotated (q>=$qual)\n";
 	print "$infile\t".($fps/$fl)."\t( $fps / $fl )\t# Unannotated heterozygosity ($gffile)\n";
 	print OUT3 "$infile\t".($fps/$fl)."\t( $fps / $fl )\t# Unannotated heterozygosity ($gffile)\n";
 }
 
 if ((exists $parameters{"D"}) && ($fdl > 0))  {
 	print "\n$infile\t$fdl\t# Length of unannotated sequence <=$df"."xmean per chr (q>=$qual)  ".(($fdl/$T)*100)."%\n";
-	print "$infile\t$fdps\t# Number of point subs that are unannotated and <=$df"."xmean per chr (q>=$qual)\n";
+	print "$infile\t$fdps\t# Number of heterozygous point subs that are unannotated and <=$df"."xmean per chr (q>=$qual)\n";
 	print "$infile\t".($fdps/$fdl)."\t( $fdps / $fdl )\t# Depth <=$df"."xmean per chr, Unannotated heterozygosity ($gffile)\n";
 	print OUT3 "$infile\t".($fdps/$fdl)."\t( $fdps / $fdl )\t# Depth <=$df"."xmean per chr, Unannotated heterozygosity ($gffile)\n";
 }
 
 if ($sl > 0) {
 	print "\n$infile\t$sl\t# Length of sequence on chr1 200,000..400,000 (q>=$qual)\n";
-	print "$infile\t$sps\t# Number of point subs on chr1 200,000..400,000 (q>=$qual)\n";
+	print "$infile\t$sps\t# Number of heterozygous point subs on chr1 200,000..400,000 (q>=$qual)\n";
 	print "$infile\t".($sps/$sl)."\t# Chr1 200kb q$qual+ unfiltered heterozygosity (\$sps/\$sl)\n";
 	print OUT3 "$infile\t".($sps/$sl)."\t# Chr1 200kb q$qual+ unfiltered heterozygosity (\$sps/\$sl)\n";
 }
 
 if ($l3 > 0) {
 	print "\n$infile\t$l3\t# Length of sequence on chr3 900,000..1,100,000 (q>=$qual)\n";
-	print "$infile\t$ps3\t# Number of point subs on chr3 900,000..1,100,000 (q>=$qual)\n";
+	print "$infile\t$ps3\t# Number of heterozygous point subs on chr3 900,000..1,100,000 (q>=$qual)\n";
 	print "$infile\t".($ps3/$l3)."\t# Chr3 200kb q$qual+ unfiltered heterozygosity (\$ps3/\$l3)\n\n";
 	print OUT3 "$infile\t".($ps3/$l3)."\t# Chr3 200kb heterozygosity q$qual+ unfiltered (\$ps3/\$l3)\n\n";
 }
