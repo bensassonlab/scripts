@@ -14,7 +14,7 @@ my $seq_recog = "a-z";
 my $W = 100000;						# window size
 my $minW = $W*0.8;
 my $exc = "'NCYC4146 1AA SC5314_A'";
-my $divcolor = "black";
+my $divcolor = "white";
 my $NAcolor = "white";
 my $maxintracladediffs = 1;		# if nearest distance is above this threshold, then nearest clade = "NA" and $NAcolor will be used
 #my $maxintracladediffs = 0.001183812;			# if nearest distance is above this threshold, then nearest clade = "NA" and $NAcolor will be used
@@ -46,7 +46,7 @@ unless (((exists $parameters{"i"}) || (exists $parameters{"I"})) && (exists $par
 	print "\n USAGE: $program -i <infile> -r <ref>\n\n";
 	print   "    -i\tfasta format infile\n";
 	print   "    -I\tprefix for fasta format infile group (e.g. chr)\n";
-	print   "    -r\treference seq name (e.g. P34048)\n";
+	print   "    -r\tname of seq to compare to others (e.g. P34048)\n";
 	print   "    -W\tsliding window size [$W bp]\n";
 	print   "    -m\tminimum good seq length for determining nearest strain [0.8*W]\n";
 	print   "    -c\toptional cladefile (define clades to ID nearest clade)\n";
