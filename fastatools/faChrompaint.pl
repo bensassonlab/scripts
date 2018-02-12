@@ -34,7 +34,7 @@ getopts('i:r:W:m:c:e:I:C:M:',\%parameters);
 if (exists $parameters{"i"}) { $infile = $parameters{"i"}; }
 if (exists $parameters{"I"}) { $infile_recog = $parameters{"I"}; }
 if (exists $parameters{"r"}) { $ref = $parameters{"r"}; }
-if (exists $parameters{"W"}) { $W = $parameters{"W"}; }
+if (exists $parameters{"W"}) { $W = $parameters{"W"}; $minW = $W*0.8; }
 if (exists $parameters{"m"}) { $minW = $parameters{"m"}; }
 if (exists $parameters{"c"}) { $cladefile = $parameters{"c"}; }
 if (exists $parameters{"C"}) { $colorfile = $parameters{"C"}; }
@@ -57,6 +57,8 @@ unless (((exists $parameters{"i"}) || (exists $parameters{"I"})) && (exists $par
 	print   " NOTE: ambiguity codes are treated as both bases (e.g. Y=C,Y=T)\n";
 	print   " Format for cladefile: list of 'seqname cladename' (e.g. 'P87	4')\n";
 	print   " Format for colorfile: list of 'cladename color' (e.g.'1 #dd1c77')\n\n";
+	print   " Without cladefile and colorfile you will only get a summary of closest sequences (no pictures)\n\n";
+
 	exit;
 }
 
