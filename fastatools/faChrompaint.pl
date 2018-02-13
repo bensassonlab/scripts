@@ -15,7 +15,7 @@ my $W = 100000;						# window size
 my $minW = $W*0.8;
 my $exc = "'NCYC4146 1AA SC5314_A'";
 my $divcolor = "white";
-my $NAcolor = "white";
+my $NAcolor = "black";
 my $maxintracladediffs = 1;		# if nearest distance is above this threshold, then nearest clade = "NA" and $NAcolor will be used
 #my $maxintracladediffs = 0.001183812;			# if nearest distance is above this threshold, then nearest clade = "NA" and $NAcolor will be used
 
@@ -205,7 +205,7 @@ foreach my $infile (sort @infiles) {
 			}
 			elsif ($nearstrain{$T} ne "NA") {
 				my $nearclade;
-				while ($nearstrain{$T} =~ /,?(\w+)/ig) { 
+				while ($nearstrain{$T} =~ /,?([0-9a-z\.]+)/ig) { 
 					if (defined $clades{$1}) {
 						if (!defined $nearclade) { $nearclade = $clades{$1}; } 
 						elsif ($nearclade ne $clades{$1}) { 
