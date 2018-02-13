@@ -54,11 +54,12 @@ unless (((exists $parameters{"i"}) || (exists $parameters{"I"})) && (exists $par
 	print   "    -M\tmaximum intraclade pDiffs [$maxintracladediffs]\n";
 	print   "    -e\texclude strains matching a pattern [$exc]\n\n";
 	print   " This script will summarise pairwise differences from a study strain in an alignment, and will optionally use R to paint chromosomes according to similarity with strains from known clades\n\n";
-	print   " NOTE: ambiguity codes are treated as both bases (e.g. Y=C,Y=T)\n";
+	print   " NOTE: ambiguity codes are treated as both bases (e.g. Y=C,Y=T)\n\n";
 	print   " Format for cladefile: list of 'seqname cladename' (e.g. 'P87	4')\n";
 	print   " Format for colorfile: list of 'cladename color' (e.g.'1 #dd1c77')\n\n";
+	print   " Black = sequence quality is too low\n";
+	print   " White = sequence is too diverged from all other sequences\n\n";
 	print   " Without cladefile and colorfile you will only get a summary of closest sequences (no pictures)\n\n";
-
 	exit;
 }
 
