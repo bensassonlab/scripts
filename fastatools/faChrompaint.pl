@@ -282,7 +282,7 @@ foreach my $infile (sort @infiles) {
 # PRINT STRAIGHTFORWARD GENOME PLOTS USING USER-SPECIFIED COLOUR FOR BINS WITH TIED MATCHES
 # data from $nearestout
 plot(c(0,max(winpos)),c(0,100),type=\"n\",main=\"$ref.$infile\",yaxt=\'n\',xaxt=\'n\')
-rect(winpos[infile==\"$infile\"]-100000,0,winpos[infile==\"$infile\"],100,col=as.vector(cladecolor[infile==\"$infile\"]))
+rect(winpos[infile==\"$infile\"]-$W,0,winpos[infile==\"$infile\"],100,col=as.vector(cladecolor[infile==\"$infile\"]))
 ";
 
 
@@ -304,7 +304,7 @@ rect(winpos[infile==\"$infile\"]-100000,0,winpos[infile==\"$infile\"],100,col=as
 
 # OVERWRITE WITH SMALLER RECTANGLES TO SHOW MULTIPLE COLORS IN CASE OF TIES 
 # data is added in using perl and is not contained in $nearestout
-rect($T-100000,$low,$T,$high,col=\"$colors{$clades[$i]}\")
+rect($T-$W,$low,$T,$high,col=\"$colors{$clades[$i]}\")
 ";
 			}
 		}
