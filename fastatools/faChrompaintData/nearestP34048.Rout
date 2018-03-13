@@ -19,25 +19,39 @@ Type 'q()' to quit R.
 
 > 
 > rm(list=ls())
-> pdf("P34048paintchre1AA.pdf")
+> pdf("P34048paintchrMe1AANCYC4146.pdf")
 > data<-read.table("P34048.nearest.tsv",header=T)
 > attach(data)
 > head(data)
-     ref   infile winpos neareststrains nearestpdiff
-1 P34048 chr1.mfa 100000         P78042 2.106461e-04
-2 P34048 chr1.mfa 200000         P78042 6.009916e-05
-3 P34048 chr1.mfa 300000         P78042 0.000000e+00
-4 P34048 chr1.mfa 400000         P78042 0.000000e+00
-5 P34048 chr1.mfa 500000         P78042 1.006218e-04
-6 P34048 chr1.mfa 600000         P78042 7.009322e-05
+     ref refclade   infile winpos nearestclade cladecolor neareststrains
+1 P34048        3 chr1.mfa 100000            3       blue         P78042
+2 P34048        3 chr1.mfa 200000            3       blue         P78042
+3 P34048        3 chr1.mfa 300000            3       blue         P78042
+4 P34048        3 chr1.mfa 400000            3       blue         P78042
+5 P34048        3 chr1.mfa 500000            3       blue         P78042
+6 P34048        3 chr1.mfa 600000            3       blue         P78042
+  nearestpdiff
+1 2.106461e-04
+2 6.009916e-05
+3 0.000000e+00
+4 0.000000e+00
+5 1.006218e-04
+6 7.009322e-05
 > tail(data)
-       ref   infile  winpos neareststrains nearestpdiff
-133 P34048 chrR.mfa 1700000         P57055 3.020053e-05
-134 P34048 chrR.mfa 1800000         P57055 2.002283e-05
-135 P34048 chrR.mfa 1900000         P78042 3.310660e-04
-136 P34048 chrR.mfa 2000000         P78042 6.110913e-05
-137 P34048 chrR.mfa 2100000         P57055 7.051902e-05
-138 P34048 chrR.mfa 2200000         P78042 5.024469e-05
+       ref refclade   infile  winpos nearestclade cladecolor neareststrains
+133 P34048        3 chrR.mfa 1700000            3       blue         P57055
+134 P34048        3 chrR.mfa 1800000            3       blue         P57055
+135 P34048        3 chrR.mfa 1900000            3       blue         P78042
+136 P34048        3 chrR.mfa 2000000            3       blue         P78042
+137 P34048        3 chrR.mfa 2100000            3       blue         P57055
+138 P34048        3 chrR.mfa 2200000            3       blue         P78042
+    nearestpdiff
+133 3.020053e-05
+134 2.002283e-05
+135 3.310660e-04
+136 6.110913e-05
+137 7.051902e-05
+138 5.024469e-05
 > 
 > par(mfrow=c(8,1),mar=c(1,1,1,1),yaxt='n',xlab='',bty="n")
 Warning message:
@@ -50,7 +64,59 @@ In par(mfrow = c(8, 1), mar = c(1, 1, 1, 1), yaxt = "n", xlab = "",  :
 > # data from P34048.nearest.tsv
 > plot(c(0,max(winpos)),c(0,100),type="n",main="P34048.chr1.mfa",yaxt='n',xaxt='n')
 > rect(winpos[infile=="chr1.mfa"]-100000,0,winpos[infile=="chr1.mfa"],100,col=as.vector(cladecolor[infile=="chr1.mfa"]))
-Error in as.vector(cladecolor[infile == "chr1.mfa"]) : 
-  object 'cladecolor' not found
-Calls: rect -> as.vector
-Execution halted
+> 
+> 
+> # PRINT STRAIGHTFORWARD GENOME PLOTS USING USER-SPECIFIED COLOUR FOR BINS WITH TIED MATCHES
+> # data from P34048.nearest.tsv
+> plot(c(0,max(winpos)),c(0,100),type="n",main="P34048.chr2.mfa",yaxt='n',xaxt='n')
+> rect(winpos[infile=="chr2.mfa"]-100000,0,winpos[infile=="chr2.mfa"],100,col=as.vector(cladecolor[infile=="chr2.mfa"]))
+> 
+> 
+> # PRINT STRAIGHTFORWARD GENOME PLOTS USING USER-SPECIFIED COLOUR FOR BINS WITH TIED MATCHES
+> # data from P34048.nearest.tsv
+> plot(c(0,max(winpos)),c(0,100),type="n",main="P34048.chr3.mfa",yaxt='n',xaxt='n')
+> rect(winpos[infile=="chr3.mfa"]-100000,0,winpos[infile=="chr3.mfa"],100,col=as.vector(cladecolor[infile=="chr3.mfa"]))
+> 
+> 
+> # PRINT STRAIGHTFORWARD GENOME PLOTS USING USER-SPECIFIED COLOUR FOR BINS WITH TIED MATCHES
+> # data from P34048.nearest.tsv
+> plot(c(0,max(winpos)),c(0,100),type="n",main="P34048.chr4.mfa",yaxt='n',xaxt='n')
+> rect(winpos[infile=="chr4.mfa"]-100000,0,winpos[infile=="chr4.mfa"],100,col=as.vector(cladecolor[infile=="chr4.mfa"]))
+> 
+> 
+> # PRINT STRAIGHTFORWARD GENOME PLOTS USING USER-SPECIFIED COLOUR FOR BINS WITH TIED MATCHES
+> # data from P34048.nearest.tsv
+> plot(c(0,max(winpos)),c(0,100),type="n",main="P34048.chr5.mfa",yaxt='n',xaxt='n')
+> rect(winpos[infile=="chr5.mfa"]-100000,0,winpos[infile=="chr5.mfa"],100,col=as.vector(cladecolor[infile=="chr5.mfa"]))
+> 
+> 
+> # PRINT STRAIGHTFORWARD GENOME PLOTS USING USER-SPECIFIED COLOUR FOR BINS WITH TIED MATCHES
+> # data from P34048.nearest.tsv
+> plot(c(0,max(winpos)),c(0,100),type="n",main="P34048.chr6.mfa",yaxt='n',xaxt='n')
+> rect(winpos[infile=="chr6.mfa"]-100000,0,winpos[infile=="chr6.mfa"],100,col=as.vector(cladecolor[infile=="chr6.mfa"]))
+> 
+> 
+> # PRINT STRAIGHTFORWARD GENOME PLOTS USING USER-SPECIFIED COLOUR FOR BINS WITH TIED MATCHES
+> # data from P34048.nearest.tsv
+> plot(c(0,max(winpos)),c(0,100),type="n",main="P34048.chr7.mfa",yaxt='n',xaxt='n')
+> rect(winpos[infile=="chr7.mfa"]-100000,0,winpos[infile=="chr7.mfa"],100,col=as.vector(cladecolor[infile=="chr7.mfa"]))
+> 
+> 
+> # PRINT STRAIGHTFORWARD GENOME PLOTS USING USER-SPECIFIED COLOUR FOR BINS WITH TIED MATCHES
+> # data from P34048.nearest.tsv
+> plot(c(0,max(winpos)),c(0,100),type="n",main="P34048.chrR.mfa",yaxt='n',xaxt='n')
+> rect(winpos[infile=="chrR.mfa"]-100000,0,winpos[infile=="chrR.mfa"],100,col=as.vector(cladecolor[infile=="chrR.mfa"]))
+> 
+> 
+> # OVERWRITE WITH SMALLER RECTANGLES TO SHOW MULTIPLE COLORS IN CASE OF TIES 
+> # data is added in using perl and is not contained in P34048.nearest.tsv
+> rect(400000-100000,0,400000,50,col="blue")
+> 
+> 
+> # OVERWRITE WITH SMALLER RECTANGLES TO SHOW MULTIPLE COLORS IN CASE OF TIES 
+> # data is added in using perl and is not contained in P34048.nearest.tsv
+> rect(400000-100000,50,400000,100,col="black")
+> 
+> proc.time()
+   user  system elapsed 
+  0.191   0.049   0.271 

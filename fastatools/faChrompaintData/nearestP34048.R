@@ -1,6 +1,6 @@
 
 rm(list=ls())
-pdf("P34048paintchre1AA.pdf")
+pdf("P34048paintchrMe1AANCYC4146.pdf")
 data<-read.table("P34048.nearest.tsv",header=T)
 attach(data)
 head(data)
@@ -56,3 +56,13 @@ rect(winpos[infile=="chr7.mfa"]-100000,0,winpos[infile=="chr7.mfa"],100,col=as.v
 # data from P34048.nearest.tsv
 plot(c(0,max(winpos)),c(0,100),type="n",main="P34048.chrR.mfa",yaxt='n',xaxt='n')
 rect(winpos[infile=="chrR.mfa"]-100000,0,winpos[infile=="chrR.mfa"],100,col=as.vector(cladecolor[infile=="chrR.mfa"]))
+
+
+# OVERWRITE WITH SMALLER RECTANGLES TO SHOW MULTIPLE COLORS IN CASE OF TIES 
+# data is added in using perl and is not contained in P34048.nearest.tsv
+rect(400000-100000,0,400000,50,col="blue")
+
+
+# OVERWRITE WITH SMALLER RECTANGLES TO SHOW MULTIPLE COLORS IN CASE OF TIES 
+# data is added in using perl and is not contained in P34048.nearest.tsv
+rect(400000-100000,50,400000,100,col="black")
