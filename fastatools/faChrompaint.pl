@@ -44,6 +44,8 @@ if (exists $parameters{"M"}) { $maxintracladediffs = $parameters{"M"}; }
 
 unless (((exists $parameters{"i"}) || (exists $parameters{"I"})) && (exists $parameters{"r"})) {
 	print "\n USAGE: $program -i <infile> -r <ref>\n\n";
+	print "    or: $program -I <prefix> -r <ref>\n\n";
+
 	print   "    -i\tfasta format infile\n";
 	print   "    -I\tprefix for fasta format infile group (e.g. chr)\n";
 	print   "    -r\tname of seq to compare to others (e.g. P34048)\n";
