@@ -10,7 +10,7 @@ my $seq_recog = "0-9A-Z ";					# SO QUALITY FILES ARE RECOGNISED
 my %parameters;							#input parameters
 my ($file, $prefix,$outfile);
 
-getopts('i:o:N',\%parameters);
+getopts('i:o:NA',\%parameters);
 
 
 if (exists($parameters{"i"})) { $file = $parameters{"i"}; }
@@ -22,6 +22,7 @@ unless ((exists $parameters{"i"}) && (exists $parameters{"o"})) {
 	print "\n USAGE: $program -i <fasta_file> -o <outfile>\n\n";
 	print   "    -i\tfasta file of one or multiple sequences or alignment scores\n";
 	print 	"    -N\tconvert to uppercase N\n";
+	print 	"    -A\tconvert ambiguity codes [KMRSWYVHDBkmrswyvhdb] to uppercase N\n";
 	print 	"    -o\tname for output file\n\n";
 	die;
 }
@@ -35,10 +36,16 @@ my ($seq_ref,@names,%seq);
 
 open OUT, ">$outfile" or die "couldn't open $outfile : $!"; 
 foreach my $name (@names) {
+	if (exists $parameters{'A'}) { 	$seq{$name} =~ s/[KMRSWYVHDB]/N/g; }
 	if (exists $parameters{'N'}) { 	$seq{$name} =~ s/[a-z]/N/g; }
 	else { $seq{$name} =~ s/[a-z]/n/g; }
 	print OUT ">$name\n$seq{$name}\n";
+
 }
+if (exists $parameters{'A'}) { 	print "Converted any [KMRSWYVHDB] to N\n"; }
+if (exists $parameters{'N'}) { 	print "Converted any [a-z] to N\n"; }
+
+
 close OUT;
 
 
