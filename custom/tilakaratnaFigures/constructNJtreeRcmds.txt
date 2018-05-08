@@ -1,0 +1,9 @@
+library(ape)
+alcat<-read.dna("alcat.gfa",format="fasta")
+f <- function(x) nj(dist.dna(x,model="F84"))
+alcatree<-f(alcat)
+set.seed(657)
+alcatbs<-boot.phylo(alcatree,alcat,f,B=10000,quiet=TRUE)
+alcatree$node.label<-round(alcatbs/(10000/100))
+write.tree(alcatree,"alcat.tree")
+
