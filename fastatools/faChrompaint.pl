@@ -16,6 +16,7 @@ my $minW = $W*0.8;
 my $exc = "'NCYC4146 1AA SC5314_A'";
 my $divcolor = "white";
 my $NAcolor = "black";
+my $warningcolor = "yellow";
 my $maxintracladediffs = 1;		# if nearest distance is above this threshold, then nearest clade = "NA" and $NAcolor will be used
 #my $maxintracladediffs = 0.001183812;			# if nearest distance is above this threshold, then nearest clade = "NA" and $NAcolor will be used
 
@@ -29,7 +30,7 @@ my %ambcodes = (
 	"K" => "GT",
 );
 
-getopts('i:r:W:m:c:e:I:C:M:',\%parameters);
+getopts('i:r:W:m:c:e:I:C:M:w:p:',\%parameters);
 
 if (exists $parameters{"i"}) { $infile = $parameters{"i"}; }
 if (exists $parameters{"I"}) { $infile_recog = $parameters{"I"}; }
@@ -40,34 +41,39 @@ if (exists $parameters{"c"}) { $cladefile = $parameters{"c"}; }
 if (exists $parameters{"C"}) { $colorfile = $parameters{"C"}; }
 if (exists $parameters{"e"}) { $exc = $parameters{"e"}; print "exclude: '$exc' if present\n"; }
 if (exists $parameters{"M"}) { $maxintracladediffs = $parameters{"M"}; }
+if (exists $parameters{"w"}) { $warningcolor = $parameters{"w"}; }
 
 
-unless (((exists $parameters{"i"}) || (exists $parameters{"I"})) && (exists $parameters{"r"})) {
+unless ((exists $parameters{"p"}) || (((exists $parameters{"i"}) || (exists $parameters{"I"})) && (exists $parameters{"r"}))) {
 	print "\n USAGE: $program -i <infile> -r <ref>\n\n";
 	print "    or: $program -I <prefix> -r <ref>\n\n";
+	print "    or: $program -p <*.nearest.tsv> -c <cladefile> -C <colorfile>\n\n";
+
 
 	print   "    -i\tfasta format infile\n";
 	print   "    -I\tprefix for fasta format infile group (e.g. chr)\n";
+	print   "    -p\t*.nearest.tsv file for Fast replotting with new colors\n";
 	print   "    -r\tname of seq to compare to others (e.g. P34048)\n";
 	print   "    -W\tsliding window size [$W bp]\n";
 	print   "    -m\tminimum good seq length for determining nearest strain [0.8*W]\n";
 	print   "    -c\toptional cladefile (define clades to ID nearest clade)\n";
 	print   "    -C\tfile of colors for clades (to go with -c)\n";
 	print   "    -M\tmaximum intraclade pDiffs [$maxintracladediffs]\n";
-	print   "    -e\texclude strains matching a pattern [$exc]\n\n";
-	print   " This script will summarise pairwise differences from a study strain in an alignment, and will optionally use R to paint chromosomes according to similarity with strains from known clades\n\n";
+	print   "    -e\texclude strains matching a pattern [$exc]\n";
+	print   "    -w\twarning color if nearest strain has no clade or color [$warningcolor]\n\n";
+	print   " This script will:\n";
+	print 	"    - summarise pairwise differences from a study strain in an alignment, \n";
+	print	"    - optionally use R to paint chromosomes according to similarity with strains from known clades\n\n";
 	print   " NOTE: ambiguity codes are treated as both bases (e.g. Y=C,Y=T)\n\n";
 	print   " Format for cladefile: list of 'seqname cladename' (e.g. 'P87	4')\n";
 	print   " Format for colorfile: list of 'cladename color' (e.g.'1 #dd1c77')\n\n";
 	print   " Black = sequence quality is too low\n";
+	print   " $warningcolor = nearest strain has no color in colorfile\n";
 	print   " White = sequence is too diverged from all other sequences\n\n";
 	print   " Without cladefile and colorfile you will only get a summary of closest sequences (no pictures)\n\n";
 	exit;
 }
 
-
-my $outfile = "$ref.pDiffs.tsv";
-open OUT, ">$outfile" or die "couldn't open $outfile : $!";
 
 my (%clades,%colors,%multiples,%multipleTs);	# need to handle multiple clade hits with smaller rectangles? %multiples: not written yet
 if (defined $cladefile) {
@@ -82,9 +88,77 @@ if (defined $cladefile) {
 
 }
 
-my @infiles;
+
+my ($nearestout,$pdf,@infiles);
+
+# USE A PAST .nearest.tsv FILE AS INPUT TO AVOID SLOW REPLOTTING WHEN ONLY CHANGING CLADE COLORS OR CLADE ASSIGNMENTS
+# NOTE: you do need to re-run from scratch if you plan to change which strains you are excluding
+
+if (defined $parameters{"p"}) { 
+	$nearestout = $parameters{"p"};
+	my %seenInfile;
+
+	open IN, "<$nearestout" or die "couldn't open $nearestout : $!";
+
+	my ($newnearestout,$header);
+	
+	while (<IN>) {
+		if (/^(\S+)\s+\S+\s+(\S+)\s+(\S+)\s+\S+\s+\S+\s+(\S+)\s+(\S+)/m) {
+			if ($1 eq "ref") { $header = $_; next; }		# header
+			if ((defined $ref) && ($ref ne $1)) { die "error: there is more than 1 reference sequence in $nearestout\n"; }
+			elsif (!defined $ref) { 				# first data line: identify reference sequence name
+				$ref = $1;
+				$newnearestout = "$ref.newnearest.tsv";
+				open NEWNEAR, ">$newnearestout" or die "couldn't open $newnearestout : $!"; 
+	 			print NEWNEAR $header; 
+			}
+			$ref = $1; my $infile = $2; my $T=$3; my $nstrains=$4; my $pDiff=$5;				# data
+
+			unless ($nstrains =~ /,/) {									# only 1 near sequence
+				if ((defined $clades{$nstrains}) && (defined $colors{$clades{$nstrains}})) {
+					print NEWNEAR "$ref\t$clades{$ref}\t$infile\t$T\t$clades{$nstrains}\t\"$colors{$clades{$nstrains}}\"\t$nstrains\t$pDiff\n";
+				}
+				elsif ($nstrains eq "diverged") { 
+					print NEWNEAR "$ref\t$clades{$ref}\t$infile\t$T\tdiverged\t\"$divcolor\"\t$nstrains\t$pDiff\n";
+				}
+				else { warn "unrecognized clade ($clades{$nstrains}) or strain ($nstrains)\n"; }
+			}
+			else {	
+				my (@snames,%cladecount);
+				while ($nstrains =~ /(\w+)/g) { push(@snames,$1); $cladecount{$clades{$1}}++; }
+				my @cladenames = keys %cladecount;
+				if (@cladenames == 1) { 									# similar strains are all from the same clade
+
+					if (defined $colors{$cladenames[0]}) {
+
+						print NEWNEAR "$ref\t$clades{$ref}\t$infile\t$T\t$cladenames[0]\t\"$colors{$cladenames[0]}\"\t$nstrains\t$pDiff\n";
+					}
+					else { warn "unrecognized clade ($cladenames[0]) or strain ($snames[0])\n"; }
+
+				}
+				else {												# there are multiple clades for this window
+					push ( @{$multipleTs{"$infile"}}, $T );
+					@{$multiples{"$infile$T"}} = @cladenames;
+
+					print NEWNEAR "$ref\t$clades{$ref}\t$infile\t$T\tmultiple\t\"$colors{$cladenames[0]}\"\t$nstrains\t$pDiff\n";
+				}
+			}
+			unless ($seenInfile{$infile}++) { push(@infiles,$infile); }	
+		}
+	}
+
+	if ($nearestout =~ /(\S+?\.nearest)\.tsv/) { $pdf = "$1.pdf"; }
+	else { $pdf = "$nearestout.pdf"; }
+
+	close NEWNEAR;
+	$nearestout = $newnearestout;
+}
+
+# OR ... figure out similarities from scratch
+
+else {
 if (defined $infile) { push(@infiles,$infile); }
-else { 
+elsif (defined $infile_recog) { 
 	opendir (DIR, ".") or die "couldn't open . : $!";
 
 	my (%strains,@dirs);	
@@ -94,7 +168,10 @@ else {
 }
 print "\nFiles to analyse: @infiles\n";
 
-my $nearestout = "$ref.nearest.tsv";
+my $outfile = "$ref.pDiffs.tsv";
+open OUT, ">$outfile" or die "couldn't open $outfile : $!";
+
+$nearestout = "$ref.nearest.tsv";
 my $seenFilter;
 
 open NEAREST, ">$nearestout" or die "couldn't open $nearestout : $!"; 
@@ -109,7 +186,7 @@ foreach my $infile (sort @infiles) {
 	($length,$seq_ref,@namesinfile) = fasta2strings($infile,$seq_recog);	# FASTA FORMAT SEQ
 	%seq = %$seq_ref;
 
-	my (@temp,%exc);
+	my (@temp,%exc);							# SEQUENCES ARE EXCLUDED WHEN INITIALLY READING THE ALIGNMENT (therefore cannot change strain strain exclusions after creating nearest.tsv)
 	if (defined $exc) {
 
 		foreach my $name (@namesinfile) { 
@@ -231,8 +308,8 @@ foreach my $infile (sort @infiles) {
 
 				print "$ref\t$clades{$ref}\t$infile\t$T\t$nearclade\t$nearstrain{$T}\t$nearestpdiff{$T}\n"; 
 				if (!defined $colors{$nearclade}) { 
-					warn "No color specified for $nearstrain{$T} in Clade $nearclade, will use black\n";  
-					$colors{$nearclade} = "black"; 
+					warn "No color specified for $nearstrain{$T} in Clade $nearclade, will use $warningcolor\n";  # NO-COLOR-SPECIFIFED WARNING SHOULD BE DIFFERENT THAN LOW QUALITY COLOR 
+					$colors{$nearclade} = $warningcolor; 
 				}
 				print NEAREST "$ref\t$clades{$ref}\t$infile\t$T\t$nearclade\t\"$colors{$nearclade}\"\t$nearstrain{$T}\t$nearestpdiff{$T}\n"; 
 	
@@ -252,12 +329,19 @@ foreach my $infile (sort @infiles) {
 close OUT;
 close NEAREST;
 
+
 # GIVE THE OUTPUT PDF A SENSIBLE NAME THAT KEEPS TRACK OF THE OPTIONS SELECTED
-my $pdf = $ref;
+$pdf = $ref;
 if (defined $parameters{"M"}) { $pdf .= "paintchrM"; }
 else { $pdf .= "paintchr"; }
 if (defined $exc) { $pdf .= "e$excpdf"; }
 $pdf .= ".pdf";
+
+}
+
+
+
+
 
 
 # PRINT R CMDS FOR VISUALIZING THE NEAREST SEQ IN IN EVERY WINDOW IN THE GENOME
