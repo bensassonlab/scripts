@@ -12,7 +12,7 @@ faChrompaint.pl -I chr -r P34048 -c clades -C colors -M 0.00066 -e 'NCYC4146 1AA
 
 To replot while only changing the colors of clades without the (slow) finding of most similar strains use the following command
 
-````
+```
 faChrompaint.pl -p P34048.nearest.tsv -c clades -C colors 
 ```
 
