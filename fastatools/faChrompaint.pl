@@ -355,7 +355,7 @@ attach(data)
 head(data)
 tail(data)
 
-par(mfrow=c(8,1),mar=c(1,1,1,1),yaxt='n',xlab='',bty=\"n\")
+par(mfrow=c(8,1),mar=c(1,1,1,1),yaxt='n',bty=\"n\")
 
 ";
 
@@ -368,7 +368,7 @@ foreach my $infile (sort @infiles) {
 
 # PRINT STRAIGHTFORWARD GENOME PLOTS USING USER-SPECIFIED COLOUR FOR BINS WITH TIED MATCHES
 # data from $nearestout
-plot(c(0,max(winpos)),c(0,100),type=\"n\",main=\"$ref.$infile\",yaxt=\'n\',xaxt=\'n\')
+plot(c(0,max(winpos)),c(0,100),type=\"n\",yaxt=\'n\',xaxt=\'n\',main=\"$ref.$infile\")
 rect(winpos[infile==\"$infile\"]-$W,0,winpos[infile==\"$infile\"],100,col=as.vector(cladecolor[infile==\"$infile\"]))
 ";
 
