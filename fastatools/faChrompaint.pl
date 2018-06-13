@@ -334,7 +334,7 @@ close NEAREST;
 $pdf = $ref;
 if (defined $parameters{"M"}) { $pdf .= "paintchrM"; }
 else { $pdf .= "paintchr"; }
-if (defined $exc) { $pdf .= "e$excpdf"; }
+if ((defined $exc) && (defined $excpdf)) { $pdf .= "e$excpdf"; }
 $pdf .= ".pdf";
 
 }
