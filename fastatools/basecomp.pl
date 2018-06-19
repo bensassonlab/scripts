@@ -32,7 +32,7 @@ unless ((exists $parameters{"i"}) || (exists $parameters{"n"})) {
 	print 	"    -n\tsequence alignment in nexus format\n";
 	print 	"    -p\tshow proportions not counts\n";
 	print 	"    -s\tsummarise with overall totals or mean proportions\n\n";
-	die;
+	exit;
 }
 
 
