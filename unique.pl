@@ -1098,7 +1098,8 @@ sub fasta {
 			$name = $1;				# START NEW FASTA ENTRY
 		}
 		elsif (/^([$seq_recog]+)$/mi) { $seq .= $1; }	# GATHER SEQ (even if spread across multiple lines)
-		elsif (/\S+/) { print "unrecognised line in datafile: [$_]\n"; }
+		elsif ((/\S+/) && ((length $_) < 10000)) { warn "unrecognised line in datafile: [$_]\n"; }
+		elsif (/\S+/) { warn "unrecognised line in datafile\n"; }
 	}
 	if ($seq =~ /[acgt]/i) { 				# FINISH OFF LAST FASTA ENTRY
 		if ($length == 0) { $length = length($seq); }
@@ -1107,10 +1108,10 @@ sub fasta {
 		}
 
 		unless ($seen{$name}++) { push (@names, $name); }
-		else { print "WARNING: $name has been seen $seen{$name} times. Only its last sequence will be analysed.\n"; }
+		else { warn "WARNING: $name has been seen $seen{$name} times. Only its last sequence will be analysed.\n"; }
 		@{$seq{$name}} = split (//, $seq); 		
 	}
-	else { print "WARNING: No sequence for $name in fasta file. It is not included in the analysis.\n"; }
+	else { warn "WARNING: No sequence for $name in fasta file. It is not included in the analysis.\n"; }
 
 
 	print "Found ".@names." sequences in fasta format. All sequences are $length bp long.\n";
