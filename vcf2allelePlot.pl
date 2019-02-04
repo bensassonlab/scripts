@@ -10,18 +10,19 @@ my %parameters;							#input parameters
 my ($infile,$outfile,$outfile2,$gffile,$outprefix);
 my $qual = 40;
 my $mwsize = 5000;
-my $upperH = 0.8;		# upper limit defining heterozygosity (ie <=80% of base calls): problem:A,C .. better to look at pileup file?
+my $lowerH = 0.2;		# upper limit defining heterozygosity (ie <=80% of base calls): problem:A,C .. better to look at pileup file?
 my $lwsize = 100000;
 my $LOH = 0.001; 
 my $df = 2;			# depth filter (e.g. 2 = 2x mean; 3=3x mean)
 my $gffoutfile = "prefix.gff";
 
 
-getopts('i:o:q:g:w:DmhI',\%parameters);
+getopts('i:o:q:g:w:H:DmhI',\%parameters);
 
 if (exists $parameters{"i"}) { $infile = $parameters{"i"}; }
 if (exists $parameters{"q"}) { $qual = $parameters{"q"}; }
 if (exists $parameters{"g"}) { $gffile = $parameters{"g"}; }
+if (exists $parameters{"H"}) { $lowerH = $parameters{"H"}; }
 if (exists $parameters{"o"}) { $outfile = $parameters{"o"}.".calls"; $outfile2 = $parameters{"o"}.".all"; $outprefix = $parameters{"o"}; }
 elsif (defined $infile) { 
 	if ($infile =~ /^(.+)\.\S+?$/m) { $outfile = "$1.calls"; $outfile2 = "$infile.all"; $outprefix = $1; }
@@ -36,6 +37,7 @@ unless (exists $parameters{"i"}) {
 	print   "    -g\tgff file of annotations [none]\n";
 	print   "    -m\tshow mode in non-overlapping sliding windows\n";
 	print   "    -h\tshow heterozygosity in non-overlapping sliding windows\n";
+	print   "    -H\tfilter heterozygous sites if < $lowerH [$lowerH]\n";
 	print   "    -w\twindow size [$mwsize bp]\n";
 	print   "    -D\tfilter positions > 2 x mean depth\n";
 	print   "    -I\tplot indels instead of read depth at point subs\n";
@@ -43,6 +45,7 @@ unless (exists $parameters{"i"}) {
 	exit;
 }
 
+my $upperH = 1-$lowerH;
 my $RcmdFile = "$outprefix.Rcmds";
 my $summaryFile = "$outprefix.het.txt";
 
@@ -153,7 +156,7 @@ while (<DATA>) {
 								# NOTE: counting multiple hits as SNPs (e.g $alt = T,A)
 		print OUT "$variant\t$filter{$chr}[$pos]\n";
 
-		if (($variant eq "snp") && ($q{$chr}[$pos]>=$qual) && ($pAlt{$chr}[$pos]>=0.2) && ($pAlt{$chr}[$pos]<=0.8))	{ 		# point sub with 0.2-0.8 allele ratio?
+		if (($variant eq "snp") && ($q{$chr}[$pos]>=$qual) && ($pAlt{$chr}[$pos]>=$lowerH) && ($pAlt{$chr}[$pos]<=(1-$lowerH)))	{ 		# point sub with 0.2-0.8 allele ratio?
 			$ps++; 										# genome-wide
 			if (($chr eq "chr1") && ($pos > 200000) && ($pos <= 400000)) { $sps++; } 	# 200kb on chr1
 			if (($chr eq "chr3") && ($pos > 900000) && ($pos <= 1100000)) { $ps3++; } 	# 200kb on chr1
@@ -191,7 +194,7 @@ foreach my $chr (sort keys %count) {							# estimate mean depth for each chr
 			if ($depth{$chr}[$pos] <= $fdepth) { 
 				$fdl++; 
 				if ((defined $variant{$chr}[$pos]) && ($variant{$chr}[$pos] eq "snp") 
-					&& ($q{$chr}[$pos]>=$qual) && ($pAlt{$chr}[$pos]>=0.2) && ($pAlt{$chr}[$pos]<=0.8)) { $fdps++; }
+					&& ($q{$chr}[$pos]>=$qual) && ($pAlt{$chr}[$pos]>=$lowerH) && ($pAlt{$chr}[$pos]<=1-$lowerH)) { $fdps++; }
 			}
 			else { $filter{$chr}[$pos] = "depth_filter"; }			}	
 	}
@@ -214,11 +217,11 @@ print "$infile\t$l\t# Length of high quality sequence (q>=$qual) ".(($l/$T)*100)
 #print "$infile\t$totalps\t# Number of ALL high quality point subs (q>=$qual)\n";
 print "$infile\t$triallelic\t# Number of high quality triallelic point subs (q>=$qual)\n";
 print "$infile\t$diallelic\t# Number of high quality diallelic point subs (q>=$qual)\n";
-print "$infile\t$ps\t# Number of high quality heterozygous point subs (q>=$qual, allele ratio: 0.2-0.8)\n";
+print "$infile\t$ps\t# Number of high quality heterozygous point subs (q>=$qual, allele ratio: $lowerH-".(1-$lowerH).")\n";
 print "$infile\t".($ps/$l)."\t( $ps / $l )\t# Genomewide heterozygosity (\$ps/\$l)\n";
 
 print OUT3 "$infile\t$l\t# Length of high quality sequence (q>=$qual) ".(($l/$T)*100)."%\n";
-print OUT3 "$infile\t$ps\t# Number of high quality heterozygous point subs (q>=$qual, allele ratio: 0.2-0.8)\n";
+print OUT3 "$infile\t$ps\t# Number of high quality heterozygous point subs (q>=$qual, allele ratio: $lowerH-$upperH\n";
 print OUT3 "$infile\t".($ps/$l)."\t( $ps / $l )\t# Genomewide heterozygosity (\$ps/\$l)\n";
 print OUT3 "$infile\t".($triallelic/$l)."\t( $triallelic / $l )\t# Genome-wide proportion of triallelic point subs (q>=$qual)\n";
 print OUT3 "$infile\t$diallelic\t# Number of high quality diallelic point subs (q>=$qual)\n";
@@ -269,10 +272,10 @@ pdf(\"$outprefix.$mwsize.pdf\")
 # CHECK R GETS THE SAME SNP TOTALS AS IN PERL STDOUT ABOVE:
 
 #  Number of high quality point subs (q>=$qual)
-length(pALT[type==\"snp\"&QUAL>=40&pALT>=0.2&pALT<=0.8])
+length(pALT[type==\"snp\"&QUAL>=40&pALT>=$lowerH&pALT<=$upperH])
 
 # Number of point subs that are unannotated (q>=40)
-length(pALT[type==\"snp\"&QUAL>=40&pALT>=0.2&pALT<=0.8&filter==\"no\"])
+length(pALT[type==\"snp\"&QUAL>=40&pALT>=$lowerH&pALT<=$upperH&filter==\"no\"])
 
 				# A function for estimating the mode
 Mode <- function(x) {
@@ -287,8 +290,8 @@ head(glW)
 tail(glW)
 gldiff_snp<-0
 glerr_snp<-0
-glhet_snp<-0	# genome-wide heterozygous (0.2-0.8) snps >= q40
-fglhet_snp<-0	# genome-wide heterozygous (0.2-0.8) snps >= q40 that are unannotated
+glhet_snp<-0	# genome-wide heterozygous ($lowerH-$upperH) snps >= q40
+fglhet_snp<-0	# genome-wide heterozygous ($lowerH-$upperH) snps >= q40 that are unannotated
 glhet_length<-0	# genome-wide heterozygous length >= q40
 fglhet_length<-0	# genome-wide heterozygous length >= q40 that are unannotated
 
@@ -318,9 +321,9 @@ het_snp<-0
 
 for(i in 1:length(W)) { 
 	modepALTsnp[i] <- Mode(pALT[pos>(W[i]-($mwsize/2))&pos<=(W[i]+($mwsize/2))&chr==\"$chr\"&QUAL>=$qual&type==\"snp\"]) 
-	diff_snp[i] <- sum(pALT[pos>(W[i]-($mwsize/2))&pos<=(W[i]+($mwsize/2))&chr==\"$chr\"&QUAL>=$qual&type==\"snp\"]>0.8) 
-	err_snp[i] <- sum(pALT[pos>(W[i]-($mwsize/2))&pos<=(W[i]+($mwsize/2))&chr==\"$chr\"&QUAL>=$qual&type==\"snp\"]<0.2) 
-	het_snp[i] <- sum(pALT[pos>(W[i]-($mwsize/2))&pos<=(W[i]+($mwsize/2))&chr==\"$chr\"&QUAL>=$qual&type==\"snp\"]<=0.8&pALT[pos>(W[i]-($mwsize/2))&pos<=(W[i]+($mwsize/2))&chr==\"$chr\"&QUAL>=$qual&type==\"snp\"]>=0.2)
+	diff_snp[i] <- sum(pALT[pos>(W[i]-($mwsize/2))&pos<=(W[i]+($mwsize/2))&chr==\"$chr\"&QUAL>=$qual&type==\"snp\"]>(1-$lowerH) 
+	err_snp[i] <- sum(pALT[pos>(W[i]-($mwsize/2))&pos<=(W[i]+($mwsize/2))&chr==\"$chr\"&QUAL>=$qual&type==\"snp\"]<$lowerH) 
+	het_snp[i] <- sum(pALT[pos>(W[i]-($mwsize/2))&pos<=(W[i]+($mwsize/2))&chr==\"$chr\"&QUAL>=$qual&type==\"snp\"]<=(1-$lowerH)&pALT[pos>(W[i]-($mwsize/2))&pos<=(W[i]+($mwsize/2))&chr==\"$chr\"&QUAL>=$qual&type==\"snp\"]>=$lowerH)
 }
 summary(modepALTsnp)
 head(cbind(W,modepALTsnp))
@@ -359,14 +362,14 @@ flhet_snp<-0
 flhet_length<-0
 
 for(i in 1:length(lW)) { 
-	ldiff_snp[i] <- sum(pALT[pos>(lW[i]-($lwsize/2))&pos<=(lW[i]+($lwsize/2))&chr==\"$chr\"&QUAL>=$qual&type==\"snp\"]>0.8) 
-	lerr_snp[i] <- sum(pALT[pos>(lW[i]-($lwsize/2))&pos<=(lW[i]+($lwsize/2))&chr==\"$chr\"&QUAL>=$qual&type==\"snp\"]<0.2) 
-	lhet_snp[i] <- sum(pALT[pos>(lW[i]-($lwsize/2))&pos<=(lW[i]+($lwsize/2))&chr==\"$chr\"&QUAL>=$qual&type==\"snp\"]<=0.8&pALT[pos>(lW[i]-($lwsize/2))&pos<=(lW[i]+($lwsize/2))&chr==\"$chr\"&QUAL>=$qual&type==\"snp\"]>=0.2)
+	ldiff_snp[i] <- sum(pALT[pos>(lW[i]-($lwsize/2))&pos<=(lW[i]+($lwsize/2))&chr==\"$chr\"&QUAL>=$qual&type==\"snp\"]>1-$lowerH) 
+	lerr_snp[i] <- sum(pALT[pos>(lW[i]-($lwsize/2))&pos<=(lW[i]+($lwsize/2))&chr==\"$chr\"&QUAL>=$qual&type==\"snp\"]<$lowerH) 
+	lhet_snp[i] <- sum(pALT[pos>(lW[i]-($lwsize/2))&pos<=(lW[i]+($lwsize/2))&chr==\"$chr\"&QUAL>=$qual&type==\"snp\"]<=$upperH&pALT[pos>(lW[i]-($lwsize/2))&pos<=(lW[i]+($lwsize/2))&chr==\"$chr\"&QUAL>=$qual&type==\"snp\"]>=$lowerH)
 	lhet_length[i] <- length(pALT[data2\$pos>(lW[i]-($lwsize/2))&data2\$pos<=(lW[i]+($lwsize/2))&data2\$chr==\"$chr\"&data2\$QUAL>=$qual])
 
-	fldiff_snp[i] <- sum(pALT[pos>(lW[i]-($lwsize/2))&pos<=(lW[i]+($lwsize/2))&chr==\"$chr\"&QUAL>=$qual&type==\"snp\"&filter==\"no\"]>0.8) 
-	flerr_snp[i] <- sum(pALT[pos>(lW[i]-($lwsize/2))&pos<=(lW[i]+($lwsize/2))&chr==\"$chr\"&QUAL>=$qual&type==\"snp\"&filter==\"no\"]<0.2) 
-	flhet_snp[i] <- sum(pALT[pos>(lW[i]-($lwsize/2))&pos<=(lW[i]+($lwsize/2))&chr==\"$chr\"&QUAL>=$qual&type==\"snp\"&filter==\"no\"]<=0.8&pALT[pos>(lW[i]-($lwsize/2))&pos<=(lW[i]+($lwsize/2))&chr==\"$chr\"&QUAL>=$qual&type==\"snp\"&filter==\"no\"]>=0.2)
+	fldiff_snp[i] <- sum(pALT[pos>(lW[i]-($lwsize/2))&pos<=(lW[i]+($lwsize/2))&chr==\"$chr\"&QUAL>=$qual&type==\"snp\"&filter==\"no\"]>$upperH) 
+	flerr_snp[i] <- sum(pALT[pos>(lW[i]-($lwsize/2))&pos<=(lW[i]+($lwsize/2))&chr==\"$chr\"&QUAL>=$qual&type==\"snp\"&filter==\"no\"]<$lowerH) 
+	flhet_snp[i] <- sum(pALT[pos>(lW[i]-($lwsize/2))&pos<=(lW[i]+($lwsize/2))&chr==\"$chr\"&QUAL>=$qual&type==\"snp\"&filter==\"no\"]<=(1-$lowerH)&pALT[pos>(lW[i]-($lwsize/2))&pos<=(lW[i]+($lwsize/2))&chr==\"$chr\"&QUAL>=$qual&type==\"snp\"&filter==\"no\"]>=$lowerH)
 	flhet_length[i] <- length(pALT[data2\$pos>(lW[i]-($lwsize/2))&data2\$pos<=(lW[i]+($lwsize/2))&data2\$chr==\"$chr\"&data2\$QUAL>=$qual&data2\$filter==\"no\"])
 
 }
