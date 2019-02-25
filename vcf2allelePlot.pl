@@ -321,7 +321,7 @@ het_snp<-0
 
 for(i in 1:length(W)) { 
 	modepALTsnp[i] <- Mode(pALT[pos>(W[i]-($mwsize/2))&pos<=(W[i]+($mwsize/2))&chr==\"$chr\"&QUAL>=$qual&type==\"snp\"]) 
-	diff_snp[i] <- sum(pALT[pos>(W[i]-($mwsize/2))&pos<=(W[i]+($mwsize/2))&chr==\"$chr\"&QUAL>=$qual&type==\"snp\"]>(1-$lowerH) 
+	diff_snp[i] <- sum(pALT[pos>(W[i]-($mwsize/2))&pos<=(W[i]+($mwsize/2))&chr==\"$chr\"&QUAL>=$qual&type==\"snp\"]>(1-$lowerH)) 
 	err_snp[i] <- sum(pALT[pos>(W[i]-($mwsize/2))&pos<=(W[i]+($mwsize/2))&chr==\"$chr\"&QUAL>=$qual&type==\"snp\"]<$lowerH) 
 	het_snp[i] <- sum(pALT[pos>(W[i]-($mwsize/2))&pos<=(W[i]+($mwsize/2))&chr==\"$chr\"&QUAL>=$qual&type==\"snp\"]<=(1-$lowerH)&pALT[pos>(W[i]-($mwsize/2))&pos<=(W[i]+($mwsize/2))&chr==\"$chr\"&QUAL>=$qual&type==\"snp\"]>=$lowerH)
 }
