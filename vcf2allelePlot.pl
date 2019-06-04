@@ -32,7 +32,7 @@ if (exists $parameters{"w"}) { $mwsize = $parameters{"w"}; }
 
 unless (exists $parameters{"i"}) {
 	print "\n USAGE: $program -i '<vcf file>'\n\n";
-	print   "    -i\tvcf file from mpileup -u + bcftools call -c\n";
+	print   "    -i\tvcf file from bcftools call\n";
 	print   "    -q\tminimum phred-scaled quality [$qual]\n";
 	print   "    -g\tgff file of annotations [none]\n";
 	print   "    -m\tshow mode in non-overlapping sliding windows\n";

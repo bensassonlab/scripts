@@ -24,7 +24,7 @@ unless ((exists $parameters{"i"}) && (exists $parameters{"o"})) {
 	print 	"    -N\tconvert to uppercase N\n";
 	print 	"    -A\tconvert ambiguity codes [KMRSWYVHDBkmrswyvhdb] to uppercase N\n";
 	print 	"    -o\tname for output file\n\n";
-	die;
+	exit;
 }
 
 

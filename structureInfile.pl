@@ -4,6 +4,8 @@ use warnings;
 use strict;
 use Getopt::Std;
 
+# NOTE: In a test, this is showing space of 2bp in first line for adjacent sites: why? is this an error? I need to check
+
 my $program = 'structureInfile.pl';				#name of script
 
 my $seq_recog = "A-Z";					
