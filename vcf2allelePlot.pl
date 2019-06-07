@@ -503,7 +503,7 @@ my $results;
 print "LOH regions:\n";
 while (<ROUT>) { $results .= $_; }
 #print $results;
-while ($results =~ /LOHstarts_(chr[a-z0-9]+).*?(\s+\S+\s+.*?)LOHends_(chr[a-z0-9]+).*?\s+/imsg) { 
+while ($results =~ /LOHstarts_(\S+).*?(\s+\S+\s+.*?)LOHends_(\S+).*?\s+/imsg) { 
 	my $chr = $1;
 	my $starts = $2;
 
