@@ -272,10 +272,10 @@ pdf(\"$outprefix.$mwsize.pdf\")
 # CHECK R GETS THE SAME SNP TOTALS AS IN PERL STDOUT ABOVE:
 
 #  Number of high quality point subs (q>=$qual)
-length(pALT[type==\"snp\"&QUAL>=40&pALT>=$lowerH&pALT<=$upperH])
+length(pALT[type==\"snp\"&QUAL>=$qual&pALT>=$lowerH&pALT<=$upperH])
 
 # Number of point subs that are unannotated (q>=40)
-length(pALT[type==\"snp\"&QUAL>=40&pALT>=$lowerH&pALT<=$upperH&filter==\"no\"])
+length(pALT[type==\"snp\"&QUAL>=$qual&pALT>=$lowerH&pALT<=$upperH&filter==\"no\"])
 
 				# A function for estimating the mode
 Mode <- function(x) {
@@ -284,7 +284,7 @@ Mode <- function(x) {
 }
 
 				# Visualise LOH threshold in whole-genome analysis
-glx<-ceiling(max(pos[QUAL>=40])/100000)
+glx<-ceiling(max(pos[QUAL>=$qual])/100000)
 glW<-1:((glx/($lwsize/1000))*100)*$lwsize-($lwsize/2)
 head(glW)
 tail(glW)
@@ -309,7 +309,7 @@ foreach my $chr (sort keys %chr) {
 	print RCMD "
 
 				# prepare a sliding window vector for estimating mode
-x<-ceiling(max(pos[chr==\"$chr\"&QUAL>=40])/100000)
+x<-ceiling(max(pos[chr==\"$chr\"&QUAL>=$qual])/100000)
 W<-1:((x/($mwsize/1000))*100)*$mwsize-($mwsize/2)
 head(W)
 tail(W)
@@ -339,7 +339,7 @@ for(i in 1:length(W)) { modepALTindel[i] <- Mode(pALT[pos>(W[i]-($mwsize/2))&pos
 				# MAKE SEPARATE STACKED PLOTS FOR SNPs AND INDELS
 				# SNPs
 plot(c(0,max(W)),c(0,1),main=\"$infile: $chr freq of alternate alleles\",sub=\"SNPs Q$qual+\",xlab=\"position\",xaxt=\"n\",ylab=\"Proportion of base calls differing from reference\",ylim=c(0,1),xlim=c(1,max(pos[chr==\"$chr\"])),type = \"n\")
-points(pos[chr==\"$chr\"&QUAL>=$qual&type==\"snp\"],pALT[chr==\"$chr\"&QUAL>=40&type==\"snp\"],pch=20,col=\"black\")
+points(pos[chr==\"$chr\"&QUAL>=$qual&type==\"snp\"],pALT[chr==\"$chr\"&QUAL>=$qual&type==\"snp\"],pch=20,col=\"black\")
 axis(1, xaxp=c(0, signif(max(pos[chr==\"$chr\"]),3), 20))
 abline(h=0.5)
 abline(h=mean(pALT[chr==\"$chr\"&QUAL>=$qual&type==\"snp\"]),col=\"orange\")
@@ -347,7 +347,7 @@ abline(h=mean(pALT[chr==\"$chr\"&QUAL>=$qual&type==\"snp\"]),col=\"orange\")
 
 ## ESTIMATE LOH regions using LOH window size ($lwsize)
 				# prepare a sliding window vector for estimating LOH regions
-lx<-ceiling(max(pos[chr==\"$chr\"&QUAL>=40])/100000)
+lx<-ceiling(max(pos[chr==\"$chr\"&QUAL>=$qual])/100000)
 lW<-1:((lx/($lwsize/1000))*100)*$lwsize-($lwsize/2)
 head(lW)
 tail(lW)
@@ -427,7 +427,7 @@ head(cbind(lW,flhet))
 		print RCMD "
 				# INDELs
 plot(c(0,max(W)),c(0,1),main=\"$infile: $chr freq of alternate alleles\",sub=\"Indels Q$qual+\",xlab=\"position\",ylab=\"Proportion of base calls differing from reference\",xaxt=\"n\",ylim=c(0,1),xlim=c(1,max(pos[chr==\"$chr\"])),type = \"n\")	
-points(pos[chr==\"$chr\"&QUAL>=$qual&type==\"indel\"],pALT[chr==\"$chr\"&QUAL>=40&type==\"indel\"],pch=20,col=\"black\")	
+points(pos[chr==\"$chr\"&QUAL>=$qual&type==\"indel\"],pALT[chr==\"$chr\"&QUAL>=$qual&type==\"indel\"],pch=20,col=\"black\")	
 axis(1, xaxp=c(0, signif(max(pos[chr==\"$chr\"]),3), 20))
 abline(h=0.5)
 abline(h=mean(pALT[chr==\"$chr\"&QUAL>=$qual&type==\"indel\"]),col=\"orange\")
