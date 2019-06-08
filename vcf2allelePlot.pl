@@ -548,7 +548,7 @@ while ($results =~ /LOHstarts_(\S+).*?(\s+\S+\s+.*?)LOHends_(\S+).*?\s+/imsg) {
 		print GFFOUT "$chr\tvcf2allelePlot.pl\tLOH\t$jstart\t$ends[$i]\t.\t+\t.\tLOHregion. Windowsize=$lwsize; snp heterozygosity < $LOH\n";
 		push (@jends,$ends[$i]);
 	}
-	else { warn "no LOH regions found in $RcmdFile.Rout\n"; } 
+	else { warn "no LOH regions found for $chr in $RcmdFile.Rout\n"; } 
 }
 
 close ROUT;
@@ -564,7 +564,9 @@ sub annotate {
 
 	print RCMD "par(xpd=F)\n";	# do not print rectangles outside the plot	
 
-	unless (defined $astart{$chr}[0]) { last; }
+#	unless (defined $astart{$chr}[0]) { last; }
+	unless (defined $astart{$chr}[0]) { return; }
+
 
 	for (my $i=0; $i<@{$astart{$chr}}; $i++) {
 		my $j;				# use a number from 1 to n for type color	
