@@ -10,7 +10,7 @@ my $seq_recog = "0-9A-Z\?";					# SO INDEXES ARE RECOGNISED
 my %parameters;							#input parameters
 my ($seqfile1, $seqfile2);
 
-getopts('i:j:na',\%parameters);
+getopts('i:j:naIs',\%parameters);
 
 
 if (exists($parameters{"i"})) { $seqfile1 = $parameters{"i"}; }
@@ -22,7 +22,9 @@ unless ((exists $parameters{"i"}) && (exists $parameters{"j"})) {
 	print   "    -i\tfasta file of seqs\n";
 	print 	"    -j\tfasta file of seqs to compare to i\n";
 	print 	"    -n\tdo not treat Ns as differences\n";
-	print 	"    -a\tignore N insertions: this needs alignments to be same length\n\n";
+	print 	"    -a\tignore N insertions: this needs alignments to be same length\n";
+	print 	"    -I\tignore case\n";
+	print 	"    -s\tlook for ordered sequence matches: do not match seq names\n\n";
 	print 	" Note: all 'X' and '-' differences are ignored\n\n";
 	exit;
 }
@@ -38,19 +40,22 @@ my ($seq_ref,@names1,@names2,%seq1,%seq2);
 %seq2 = %$seq_ref;
 
 for (my $i=0; $i < @names1; $i++) {
-	unless (exists $seq2{$names1[$i]}) { 
-		print "$seqfile1\t$names1[$i]\tmissing in $seqfile2\n";
-		next;	
+
+	if (!defined $parameters{"s"}) {
+		unless (exists $seq2{$names2[$i]}) { 
+			print "$seqfile1\t$names1[$i]\tmissing in $seqfile2\n";
+			next;	
+		}
 	}
 	my ($seq1,$seq2);
-	$seq1{$names1[$i]} =~ tr/[a-z]/[A-Z]/;
-	$seq2{$names1[$i]} =~ tr/[a-z]/[A-Z]/;
+
+	if ($parameters{"I"}) { 
+		$seq1{$names1[$i]} =~ tr/[a-z]/[A-Z]/;
+		$seq2{$names2[$i]} =~ tr/[a-z]/[A-Z]/;
+	}
 	($seq1 = $seq1{$names1[$i]}) =~ tr/X-//d;		
-	($seq2 = $seq2{$names1[$i]}) =~ tr/X-//d; 
-	if ($names1[$i] eq 'spar_chr3') {
-		$seq1 =~ tr/Nn//d;
-		$seq2 =~ tr/Nn//d; 
-	}		
+	($seq2 = $seq2{$names2[$i]}) =~ tr/X-//d; 
+
 	if (exists $parameters{'n'}) {
 		$seq1 =~ tr/Nn/../;
 		$seq2 =~ tr/Nn/../;
@@ -67,11 +72,11 @@ for (my $i=0; $i < @names1; $i++) {
 	}
 	else { 
 		unless (exists $parameters{'n'}) {
-			print "$seqfile1\t$names1[$i]\t".length($seq1)." bp\tdifferent in $seqfile2\t".length($seq2)." bp\n";
+			print "$seqfile1\t$names1[$i]\t".length($seq1)." bp\tdifferent to $names2[$i] in $seqfile2\t".length($seq2)." bp\n";
 		}
 
 		my @seq1 = split (//,$seq1{$names1[$i]});
-		my @seq2 = split (//,$seq2{$names1[$i]});
+		my @seq2 = split (//,$seq2{$names2[$i]});
 		my @gappedseq1 = @seq1;			# ???
 		my @gappedseq2 = @seq2;			# ???
 
@@ -107,7 +112,7 @@ for (my $i=0; $i < @names1; $i++) {
 				}
 
 				if (($count == 0) && (exists $parameters{'n'})) {
-					print "$seqfile1\t$names1[$i]\t".length($seq1)." bp\tdifferent in $seqfile2\t".length($seq2)." bp (wild Ns)\n";
+					print "$seqfile1\t$names1[$i]\t".length($seq1)." bp\tdifferent to $names2[$i] in $seqfile2\t".length($seq2)." bp (wild Ns)\n";
 				}
 
 				print "$seq1[$i] pos ".($i+1)." in $seqfile1 ne $seq2[$j] pos ".($j+1)." in $seqfile2\n";
@@ -123,10 +128,10 @@ for (my $i=0; $i < @names1; $i++) {
 			unless ( ($gappedseq1[$i] =~ /[nX-]/i) || ($gappedseq2[$i] =~ /[nX-]/i) ) { $compared++; }	
 		}
 		if ((exists $parameters{'n'}) && ($count == 0)) { 
-			print "$seqfile1 $names1[$i]\tsame in $seqfile2 ".length($seq2)." bp (wild Ns) compared: $compared\n"; 		
+			print "$seqfile1 $names1[$i]\tsame as $names2[$i] $seqfile2 ".length($seq2)." bp (wild Ns) compared: $compared\n"; 		
 		}
 		elsif ((exists $parameters{'n'}) && ($count > 0)) { 
-			print "$seqfile1 $names1[$i]\tdifferent in $seqfile2 ".length($seq2)." bp (wild Ns) WARNING compared: over$compared\n"; 
+			print "$seqfile1 $names1[$i]\tdifferent to $names2[$i] in $seqfile2 ".length($seq2)." bp (wild Ns) WARNING compared: over$compared\n"; 
 		}
 
 
