@@ -4,17 +4,17 @@ use warnings;
 use strict;
 use Getopt::Std;
 
-my $program = 'al_check.pl';					#name of script
+my $program = 'faCheck.pl';					#name of script
 
 my $seq_recog = "0-9A-Z\?";					# SO INDEXES ARE RECOGNISED
 my %parameters;							#input parameters
-my ($alignment1, $alignment2);
+my ($seqfile1, $seqfile2);
 
 getopts('i:j:na',\%parameters);
 
 
-if (exists($parameters{"i"})) { $alignment1 = $parameters{"i"}; }
-if (exists($parameters{"j"})) { $alignment2 = $parameters{"j"}; }
+if (exists($parameters{"i"})) { $seqfile1 = $parameters{"i"}; }
+if (exists($parameters{"j"})) { $seqfile2 = $parameters{"j"}; }
 
 
 unless ((exists $parameters{"i"}) && (exists $parameters{"j"})) {
@@ -24,33 +24,30 @@ unless ((exists $parameters{"i"}) && (exists $parameters{"j"})) {
 	print 	"    -n\tdo not treat Ns as differences\n";
 	print 	"    -a\tignore N insertions: this needs alignments to be same length\n\n";
 	print 	" Note: all 'X' and '-' differences are ignored\n\n";
-	die;
+	exit;
 }
 
 
 ## READ IN SEQUENCES FROM ALIGNMENT FILE 
 #
 my ($seq_ref,@names1,@names2,%seq1,%seq2);
-($seq_ref,@names1) = fasta2strings($alignment1,$seq_recog);	# FASTA FORMAT SEQ
+($seq_ref,@names1) = fasta2strings($seqfile1,$seq_recog);	# FASTA FORMAT SEQ
 %seq1 = %$seq_ref;
 
-($seq_ref,@names2) = fasta2strings($alignment2,$seq_recog);	# FASTA FORMAT SEQ
+($seq_ref,@names2) = fasta2strings($seqfile2,$seq_recog);	# FASTA FORMAT SEQ
 %seq2 = %$seq_ref;
 
-foreach my $name1 (@names1) {
-	if ($name1 =~ /index/i) { 
-		next; 
-	}
-	unless (exists $seq2{$name1}) { 
-		print "$alignment1\t$name1\tmissing in $alignment2\n";
+for (my $i=0; $i < @names1; $i++) {
+	unless (exists $seq2{$names1[$i]}) { 
+		print "$seqfile1\t$names1[$i]\tmissing in $seqfile2\n";
 		next;	
 	}
 	my ($seq1,$seq2);
-	$seq1{$name1} =~ tr/[a-z]/[A-Z]/;
-	$seq2{$name1} =~ tr/[a-z]/[A-Z]/;
-	($seq1 = $seq1{$name1}) =~ tr/X-//d;		
-	($seq2 = $seq2{$name1}) =~ tr/X-//d; 
-	if ($name1 eq 'spar_chr3') {
+	$seq1{$names1[$i]} =~ tr/[a-z]/[A-Z]/;
+	$seq2{$names1[$i]} =~ tr/[a-z]/[A-Z]/;
+	($seq1 = $seq1{$names1[$i]}) =~ tr/X-//d;		
+	($seq2 = $seq2{$names1[$i]}) =~ tr/X-//d; 
+	if ($names1[$i] eq 'spar_chr3') {
 		$seq1 =~ tr/Nn//d;
 		$seq2 =~ tr/Nn//d; 
 	}		
@@ -64,17 +61,17 @@ foreach my $name1 (@names1) {
 	if ($seq1 eq $seq2) {
 	       	if (length($seq2) == length($seq1)) { 
 			$compared = length($seq2); 	
-			print "$alignment1\t$name1\tidentical in $alignment2\tcompared: $compared bp\n";
+			print "$seqfile1\t$names1[$i]\tidentical in $seqfile2\tcompared: $compared bp\n";
 		}	
 		else { print "Error: seqs are identical, but different lengths ".length($seq1)." and ".length($seq2)."\n"; }
 	}
 	else { 
 		unless (exists $parameters{'n'}) {
-			print "$alignment1\t$name1\t".length($seq1)." bp\tdifferent in $alignment2\t".length($seq2)." bp\n";
+			print "$seqfile1\t$names1[$i]\t".length($seq1)." bp\tdifferent in $seqfile2\t".length($seq2)." bp\n";
 		}
 
-		my @seq1 = split (//,$seq1{$name1});
-		my @seq2 = split (//,$seq2{$name1});
+		my @seq1 = split (//,$seq1{$names1[$i]});
+		my @seq2 = split (//,$seq2{$names1[$i]});
 		my @gappedseq1 = @seq1;			# ???
 		my @gappedseq2 = @seq2;			# ???
 
@@ -90,7 +87,7 @@ foreach my $name1 (@names1) {
 			while ($seq2[$j] =~ /[X-]/g) { $j++; if ($j == @seq2) { last; } } 
 			if ($i == @seq1) { last; } 	
 			
-#			if ($i != $j) { print "$alignment1 $i $seq1[$i] ne $alignment2 $j $seq2[$j]\n"; }		
+#			if ($i != $j) { print "$seqfile1 $i $seq1[$i] ne $seqfile2 $j $seq2[$j]\n"; }		
 			
 			if (($seq1[$i] ne $seq2[$j]) || (($count > 0) && ($count < 20))) {
 				if ((exists $parameters{'n'}) && (($seq1[$i] =~/n/i) || ($seq2[$j] =~ /n/i))) { next; }	# ignore differences due to "n"s
@@ -110,26 +107,26 @@ foreach my $name1 (@names1) {
 				}
 
 				if (($count == 0) && (exists $parameters{'n'})) {
-					print "$alignment1\t$name1\t".length($seq1)." bp\tdifferent in $alignment2\t".length($seq2)." bp (wild Ns)\n";
+					print "$seqfile1\t$names1[$i]\t".length($seq1)." bp\tdifferent in $seqfile2\t".length($seq2)." bp (wild Ns)\n";
 				}
 
-				print "$seq1[$i] pos ".($i+1)." in $alignment1 ne $seq2[$j] pos ".($j+1)." in $alignment2\n";
+				print "$seq1[$i] pos ".($i+1)." in $seqfile1 ne $seq2[$j] pos ".($j+1)." in $seqfile2\n";
 				$diff1 .= $seq1[$i];
 			       	$diff2 .= $seq2[$j];
 				$count++;
 			}
 			if ($count >= 20) {
-			       	print "Diffs start with : \t$diff1 in $alignment1\n";
-				print "                   \t$diff2 in $alignment2\n";
+			       	print "Diffs start with : \t$diff1 in $seqfile1\n";
+				print "                   \t$diff2 in $seqfile2\n";
 				last; 
 			}
 			unless ( ($gappedseq1[$i] =~ /[nX-]/i) || ($gappedseq2[$i] =~ /[nX-]/i) ) { $compared++; }	
 		}
 		if ((exists $parameters{'n'}) && ($count == 0)) { 
-			print "$alignment1 $name1\tsame in $alignment2 ".length($seq2)." bp (wild Ns) compared: $compared\n"; 		
+			print "$seqfile1 $names1[$i]\tsame in $seqfile2 ".length($seq2)." bp (wild Ns) compared: $compared\n"; 		
 		}
 		elsif ((exists $parameters{'n'}) && ($count > 0)) { 
-			print "$alignment1 $name1\tdifferent in $alignment2 ".length($seq2)." bp (wild Ns) WARNING compared: over$compared\n"; 
+			print "$seqfile1 $names1[$i]\tdifferent in $seqfile2 ".length($seq2)." bp (wild Ns) WARNING compared: over$compared\n"; 
 		}
 
 
