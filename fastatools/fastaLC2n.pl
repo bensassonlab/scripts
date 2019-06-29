@@ -10,19 +10,20 @@ my $seq_recog = "0-9A-Z ";					# SO QUALITY FILES ARE RECOGNISED
 my %parameters;							#input parameters
 my ($file, $prefix,$outfile);
 
-getopts('i:o:NA',\%parameters);
+getopts('i:o:NAp',\%parameters);
 
 
 if (exists($parameters{"i"})) { $file = $parameters{"i"}; }
 if (exists($parameters{"o"})) { $outfile = $parameters{"o"}; }
 
 
-unless ((exists $parameters{"i"}) && (exists $parameters{"o"})) {
-	print "\n $program converts lowercase sequence to 'n's\n";
-	print "\n USAGE: $program -i <fasta_file> -o <outfile>\n\n";
+unless (exists $parameters{"i"}) {
+	print "\n $program converts lowercase sequence to 'n's or reports positions\n";
+	print "\n USAGE: $program -i <fasta_file>\n\n";
 	print   "    -i\tfasta file of one or multiple sequences or alignment scores\n";
 	print 	"    -N\tconvert to uppercase N\n";
 	print 	"    -A\tconvert ambiguity codes [KMRSWYVHDBkmrswyvhdb] to uppercase N\n";
+	print 	"    -p\treport positions of lowercase sequence\n";
 	print 	"    -o\tname for output file\n\n";
 	exit;
 }
@@ -34,19 +35,38 @@ my ($seq_ref,@names,%seq);
 ($seq_ref,@names) = fasta2strings($file,$seq_recog);	# FASTA FORMAT SEQ
 %seq = %$seq_ref;
 
-open OUT, ">$outfile" or die "couldn't open $outfile : $!"; 
+if (defined $outfile) { open OUT, ">$outfile" or die "couldn't open $outfile : $!"; }
+
 foreach my $name (@names) {
 	if (exists $parameters{'A'}) { 	$seq{$name} =~ s/[KMRSWYVHDB]/N/g; }
 	if (exists $parameters{'N'}) { 	$seq{$name} =~ s/[a-z]/N/g; }
+	if (exists $parameters{'p'}) { 	
+		my $start = 0;
+		my $prevend = 0;
+		while ($seq{$name} =~ /([a-z])/g) {
+			my $pos = pos($seq{$name}); 
+		#	print "$name\t$pos\t$1\n";
+
+			if ($start==0) { $start = $pos-1; }
+			if ($prevend==0) { $prevend = $pos; next; }
+			if ($pos==$prevend+1) { $prevend = $pos; next; }
+			else {
+				print "$name\t$start\t$prevend\n";
+				$start = 0;
+				$prevend = 0;
+			}
+		} 
+	}
+
 	else { $seq{$name} =~ s/[a-z]/n/g; }
-	print OUT ">$name\n$seq{$name}\n";
+	if (defined $outfile) { print OUT ">$name\n$seq{$name}\n"; }
 
 }
 if (exists $parameters{'A'}) { 	print "Converted any [KMRSWYVHDB] to N\n"; }
 if (exists $parameters{'N'}) { 	print "Converted any [a-z] to N\n"; }
 
 
-close OUT;
+if (defined $outfile) { close OUT; }
 
 
 					#################
