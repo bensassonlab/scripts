@@ -66,7 +66,7 @@ for (my $i=0; $i < @names1; $i++) {
 	if ($seq1 eq $seq2) {
 	       	if (length($seq2) == length($seq1)) { 
 			$compared = length($seq2); 	
-			print "$seqfile1\t$names1[$i]\tidentical in $seqfile2\tcompared: $compared bp\n";
+			print "$seqfile1\t$names1[$i]\tidentical to $names2[$i] in $seqfile2\tcompared: $compared bp\n";
 		}	
 		else { print "Error: seqs are identical, but different lengths ".length($seq1)." and ".length($seq2)."\n"; }
 	}
