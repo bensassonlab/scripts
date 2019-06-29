@@ -36,6 +36,7 @@ my ($seq_ref,@names,%seq);
 %seq = %$seq_ref;
 
 if (defined $outfile) { open OUT, ">$outfile" or die "couldn't open $outfile : $!"; }
+if (exists $parameters{'p'}) { print "Positions of lower case letters in $file:\n\n"; }	
 
 foreach my $name (@names) {
 	if (exists $parameters{'A'}) { 	$seq{$name} =~ s/[KMRSWYVHDB]/N/g; }
