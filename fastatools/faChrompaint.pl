@@ -245,11 +245,7 @@ foreach my $infile (sort @infiles) {
 				}
 				else {	
 					my $pDiff = $diff/$l;
-					if ($l < $minW) { 		# skip if data is low quality (previously, divergence could be recorded for diverged low quality windows)
-						$diff = 0; $Wi = 0; $l = 0;
-						next; 
-					} 
-					elsif ($pDiff < $maxintracladediffs) {
+					if (($l >= $minW) && ($pDiff < $maxintracladediffs)) {
 						if ((defined $nearstrain{$T}) && ($nearstrain{$T} eq "NA")) {
 							unless ($seenFilter++) { print "filtering regions that have diverged over $maxintracladediffs from all other sequences\n"; } 
 							$minpdiff{$T} = $pDiff; $nearstrain{$T} = $name; $nearestpdiff{$T} = $pDiff;
