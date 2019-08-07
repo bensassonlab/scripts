@@ -254,7 +254,7 @@ foreach my $infile (sort @infiles) {
 						if (!defined $minpdiff{$T}) { $minpdiff{$T} = $pDiff; $nearstrain{$T} = $name; $nearestpdiff{$T} = $pDiff; }
 						elsif ($pDiff < $minpdiff{$T}) { $minpdiff{$T} = $pDiff; $nearstrain{$T} = $name; $nearestpdiff{$T} = $pDiff; }
 						elsif ($pDiff == $minpdiff{$T}) { $nearstrain{$T} .= ",$name" ; }
-					} 
+					} 					
 					elsif (($pDiff > $maxintracladediffs) && (!defined $nearstrain{$T})) { 	# outside the -M threshold
 					#	$nearstrain{$T} = "diverged"; $nearestpdiff{$T} = $pDiff; 
 					#	$minpdiff{$T} = $pDiff;						# be clear that this is a high-divergence minimum 
@@ -264,6 +264,13 @@ foreach my $infile (sort @infiles) {
 
 					}
 					elsif (!defined $nearstrain{$T}) { $nearstrain{$T} = "NA"; $nearestpdiff{$T} = $pDiff; }
+
+					elsif (($l < $minW) && ($pDiff < $maxintracladediffs)) {			# low quality window within the -M threshold
+						if ($pDiff <= $minpdiff{$T}) { 
+							print "warning \$pDiff = $pDiff for sequence $name but sequence quality is low $l < $minW\n"; 
+						}
+
+					}
 
 					if (defined $cladefile) { print OUT "$infile\t$ref\t$clades{$ref}\t$name\t$clades{$name}\t$T\t$diff\t$l\t$pDiff\n"; }
 					else { print OUT "$infile\t$ref\t$name\t$T\t$diff\t$l\t$pDiff\n"; }
