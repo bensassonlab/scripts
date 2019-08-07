@@ -255,7 +255,7 @@ foreach my $infile (sort @infiles) {
 						elsif ($pDiff < $minpdiff{$T}) { $minpdiff{$T} = $pDiff; $nearstrain{$T} = $name; $nearestpdiff{$T} = $pDiff; }
 						elsif ($pDiff == $minpdiff{$T}) { $nearstrain{$T} .= ",$name" ; }
 					} 
-					elsif (($l >= $minW) && ($pDiff > $maxintracladediffs) && (!defined $nearstrain{$T})) { 	# good quality window outside the -M threshold
+					elsif (($pDiff > $maxintracladediffs) && (!defined $nearstrain{$T})) { 	# outside the -M threshold
 						$nearstrain{$T} = "diverged"; $nearestpdiff{$T} = $pDiff; 
 					#	$minpdiff{$T} = $pDiff;						# be clear that this is a high-divergence minimum 
 
