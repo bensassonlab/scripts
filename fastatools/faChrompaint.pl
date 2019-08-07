@@ -257,6 +257,7 @@ foreach my $infile (sort @infiles) {
 					} 
 					elsif (($l >= $minW) && ($pDiff > $maxintracladediffs) &&  (!defined $nearstrain{$T})) { 	# avoid low quality windows
 						$nearstrain{$T} = "diverged"; $nearestpdiff{$T} = $pDiff; 
+						$minpdiff{$T} = $pDiff;						# be clear that this is a high-divergence minimum 
 					}
 					elsif (!defined $nearstrain{$T}) { $nearstrain{$T} = "NA"; $nearestpdiff{$T} = $pDiff; }
 
