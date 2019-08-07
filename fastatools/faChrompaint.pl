@@ -245,7 +245,7 @@ foreach my $infile (sort @infiles) {
 				}
 				else {	
 					my $pDiff = $diff/$l;
-					if (($l >= $minW) && ($pDiff < $maxintracladediffs)) {						# avoid low quality windows
+					if (($l >= $minW) && ($pDiff < $maxintracladediffs)) {			# good quality window within the -M threshold
 
 						if ((defined $nearstrain{$T}) && ($nearstrain{$T} eq "NA")) {
 							unless ($seenFilter++) { print "filtering regions that have diverged over $maxintracladediffs from all other sequences\n"; } 
@@ -255,9 +255,13 @@ foreach my $infile (sort @infiles) {
 						elsif ($pDiff < $minpdiff{$T}) { $minpdiff{$T} = $pDiff; $nearstrain{$T} = $name; $nearestpdiff{$T} = $pDiff; }
 						elsif ($pDiff == $minpdiff{$T}) { $nearstrain{$T} .= ",$name" ; }
 					} 
-					elsif (($l >= $minW) && ($pDiff > $maxintracladediffs) &&  (!defined $nearstrain{$T})) { 	# avoid low quality windows
-						$nearstrain{$T} = "diverged"; $nearestpdiff{$T} = $pDiff; 
-						$minpdiff{$T} = $pDiff;						# be clear that this is a high-divergence minimum 
+					elsif (($l >= $minW) && ($pDiff > $maxintracladediffs) && (!defined $nearstrain{$T})) { 	# good quality window outside the -M threshold
+					#	$nearstrain{$T} = "diverged"; $nearestpdiff{$T} = $pDiff; 
+					#	$minpdiff{$T} = $pDiff;						# be clear that this is a high-divergence minimum 
+
+						if (!defined $minpdiff{$T}) { $minpdiff{$T} = $pDiff; $nearstrain{$T} = "diverged"; $nearestpdiff{$T} = $pDiff; }
+						elsif ($pDiff <= $minpdiff{$T}) { $minpdiff{$T} = $pDiff; $nearstrain{$T} = "diverged"; $nearestpdiff{$T} = $pDiff; }
+
 					}
 					elsif (!defined $nearstrain{$T}) { $nearstrain{$T} = "NA"; $nearestpdiff{$T} = $pDiff; }
 
