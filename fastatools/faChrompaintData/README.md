@@ -7,7 +7,7 @@ each rectangle is colored according to the clade of the nearest sequence using t
 The -M option means that the maximum difference allowed in order to give a clade assignment is 0.00066 (ie 0.066%) because 90% of within-clade differences for these C. albicans data are below this value
 
 ```
-faChrompaint.pl -I chr -r P34048 -c clades -C colors -M 0.00066 -e 'NCYC4146 1AA SC5314_A'
+faChrompaint.pl -I chr -r P34048 -c clades -C colors -M 0.0066 -e 'NCYC4146 1AA SC5314_A'
 ```
 
 To replot while only changing the colors of clades without the (slow) finding of most similar strains use the following command
