@@ -64,7 +64,7 @@ foreach my $name (@names) {
 			$total_bases{$name} += $count{"$name$base"}; 
 			$total_bases{'all'} += $count{"$name$base"}; 
 		}
-		if (exists $parameters{'s'}) { $sum{$base} += $count{"$name$base"}; }
+		if ((exists $parameters{'s'}) && (defined $count{"$name$base"})) { $sum{$base} += $count{"$name$base"}; }
 		
 	}
 }	
